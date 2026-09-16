@@ -1,6 +1,6 @@
 (function () {
   const parts = [
-    { name: "Hub Service Labor Rate", pn: "LABOR" },
+    { name: "Hub Service Labor Rate (ONLY SELECT WHEN NO PROBLEM FOUND BY OEM)", pn: "LABOR" },
     { name: "ADHESIVE, PSA, PIEZO RING, CADD-SOLIS 1/EA", pn: "30-3285" },
     { name: "AIR DETECTOR, SOLIS", pn: "70-0446" },
     { name: "AY, 27MM PIEZO SOUNDER, FRONT", pn: "70-0354" },
@@ -105,17 +105,17 @@
   };
 
   document.getElementById("s_copy").onclick = () => {
+    const laborLabel = "Hub Service Labor Rate (ONLY SELECT WHEN NO PROBLEM FOUND BY OEM)";
     let selectedParts = Array.from(box.querySelectorAll(".s_chk:checked")).map((cb) => cb.value);
-    
-    // Filter out the labor line from physical replaced parts
-    let physicalParts = selectedParts.filter((p) => p !== "Hub Service Labor Rate");
-    let hasLabor = selectedParts.includes("Hub Service Labor Rate");
+
+    let physicalParts = selectedParts.filter((p) => p !== laborLabel);
+    let hasLabor = selectedParts.includes(laborLabel);
 
     let text = "";
     const testBlock = "Visual Inspection, Pump Power Up Test, Motor Test, Remote Dose Test, Keypad Test, Latch Lock Test, Disposable Test, Air Detector Test, Verify Air Detector Height, LCD Screen Inspection, Amber Green and LED Functional Test, Adjust LCD POT Screen, Downstream Occlusion Test, Upstream Occlusion Sensor Test, Battery Fallout Test, 50ml Cassette Test, Go_No_Go Test, and Delivery Accuracy Test 20mL.";
 
     if (hasLabor && physicalParts.length === 0) {
-      // ONLY Hub Service Labor Rate selected: omit replaced parts section
+      // ONLY Hub Service Labor Rate selected: excludes "parts replaced" section
       text = `The OEM certifies that the device passes the following: ${testBlock}`;
     } else if (physicalParts.length > 0) {
       // Replaced parts selected (with or without labor)
