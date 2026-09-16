@@ -1,7 +1,7 @@
 (function(){
   const bodyText = document.body ? (document.body.innerText || "") : "";
 
-  // 1. Company Map (27 Companies)
+  // 1. Company Map (28 Companies)
   const companyMap = [
     { pattern: /New England Life Care|NELC/i, name: "NELC" },
     { pattern: /Adv(?:\.|anced)?\s*Infusion\s*Care/i, name: "Adv. Infusion Care" },
@@ -29,7 +29,8 @@
     { pattern: /Twel?veStone/i, name: "TwevleStone" },
     { pattern: /UNC\s*Homecare\s*Specialists/i, name: "UNC Homecare Specialists" },
     { pattern: /University\s*Hospitals/i, name: "University Hospitals" },
-    { pattern: /William\s*Bros/i, name: "William Bros" }
+    { pattern: /William\s*Bros/i, name: "William Bros" },
+    { pattern: /(?:Owner|Customer|Facility|Account|Client)\s*[:#-]?\s*.*McKesson|McKesson\s*Medical/i, name: "McKesson" }
   ];
 
   // 2. Device Map (15 Devices - multi-word & specific patterns placed first)
