@@ -1,5 +1,29 @@
 (function(){
-  const bodyText = document.body ? (document.body.innerText || "") : "";
+  // Extract text across page, inputs, selects, and readable iframes
+  function collectAllText() {
+    let fullText = document.body ? (document.body.innerText || "") : "";
+    
+    // Also pull values from input fields and select dropdowns (where OneTrack often stores customer)
+    document.querySelectorAll("input, select, textarea").forEach(el => {
+      if (el.value) fullText += " " + el.value;
+    });
+
+    // Check accessible iframes
+    document.querySelectorAll("iframe, frame").forEach(f => {
+      try {
+        const doc = f.contentDocument || (f.contentWindow && f.contentWindow.document);
+        if (doc && doc.body) {
+          fullText += " " + doc.body.innerText;
+          doc.querySelectorAll("input, select").forEach(el => {
+            if (el.value) fullText += " " + el.value;
+          });
+        }
+      } catch(e){}
+    });
+    return fullText;
+  }
+
+  const bodyText = collectAllText();
 
   // 1. Company Map (28 Companies)
   const companyMap = [
@@ -30,10 +54,10 @@
     { pattern: /UNC\s*Homecare\s*Specialists/i, name: "UNC Homecare Specialists" },
     { pattern: /University\s*Hospitals/i, name: "University Hospitals" },
     { pattern: /William\s*Bros/i, name: "William Bros" },
-    { pattern: /(?:Owner|Customer|Facility|Account|Client)\s*[:#-]?\s*.*McKesson|McKesson\s*Medical/i, name: "McKesson" }
+    { pattern: /McKesson/i, name: "McKesson" }
   ];
 
-  // 2. Device Map (15 Devices - multi-word & specific patterns placed first)
+  // 2. Device Map (15 Devices)
   const deviceMap = [
     { pattern: /Kangaroo\s*Omni|Omni/i, name: "Kangaroo Omni" },
     { pattern: /Freedom\s*60/i, name: "Freedom 60" },
@@ -86,20 +110,25 @@
     }
   }
 
-  // Sanitize Windows invalid filename characters: \ / : * ? " < > |
   const clean = str => (str || "").replace(/[\\/:*?"<>|]/g, "").trim();
 
-  let finalCompany = clean(detectedCompany) || "Company";
-  let finalDevice = clean(detectedDevice) || "Device";
+  let finalCompany = clean(detectedCompany);
+  let finalDevice = clean(detectedDevice) || "Infinity";
   let finalSn = clean(sn);
 
-  // Fallback prompt only if serial number is completely unreadable
+  // If company was not matched from the 28 known companies, ask so it doesn't default to "Company"
+  if (!finalCompany) {
+    finalCompany = prompt("Company not recognized automatically. Enter Company name (e.g. NELC, Coram, Option Care):", "NELC");
+    if (!finalCompany) return;
+  }
+
+  // If SN is missing, prompt
   if (!finalSn) {
     finalSn = prompt("Serial Number not detected. Enter Serial #:", "");
     if (!finalSn) return;
   }
 
-  const fileName = `${finalCompany} ${finalDevice} SN${clean(finalSn)} Repair Authorization Report.pdf`;
+  const fileName = `${clean(finalCompany)} ${finalDevice} SN${clean(finalSn)} Repair Authorization Report.pdf`;
 
   // --- CLIPBOARD ACTION ---
   function copyText(text) {
