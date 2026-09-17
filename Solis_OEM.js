@@ -1,6 +1,6 @@
 (function () {
   const parts = [
-    { name: "Hub Service Labor Rate (ONLY SELECT WHEN NO PROBLEM FOUND BY OEM)", pn: "LABOR" },
+    { name: "Hub Service Labor Rate (ONLY SELECT WHEN NOTHING ELSE IS REPLACED BY OEM)", pn: "LABOR" },
     { name: "ADHESIVE, PSA, PIEZO RING, CADD-SOLIS 1/EA", pn: "30-3285" },
     { name: "AIR DETECTOR, SOLIS", pn: "70-0446" },
     { name: "AY, 27MM PIEZO SOUNDER, FRONT", pn: "70-0354" },
