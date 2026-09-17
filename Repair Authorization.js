@@ -1,16 +1,16 @@
 (function(){
-  // Helper: Pulls text strictly from the "Owner" row in OneTrack
-  function getOwnerFromDOM() {
+  // Helper: Pull text strictly next to a specific label in OneTrack
+  function getFieldFromDOM(labelText) {
     const labels = Array.from(document.querySelectorAll('td, th, label, span, div, p'));
-    const ownerLabel = labels.find(el => el.children.length === 0 && el.textContent.trim() === 'Owner');
+    const target = labels.find(el => el.children.length === 0 && el.textContent.trim().toLowerCase() === labelText.toLowerCase());
     
-    if (ownerLabel) {
-      if (ownerLabel.nextElementSibling) {
-        return ownerLabel.nextElementSibling.textContent.trim();
+    if (target) {
+      if (target.nextElementSibling) {
+        return target.nextElementSibling.textContent.trim();
       }
-      const parent = ownerLabel.parentElement;
+      const parent = target.parentElement;
       if (parent && parent.children.length > 1) {
-        const idx = Array.from(parent.children).indexOf(ownerLabel);
+        const idx = Array.from(parent.children).indexOf(target);
         if (idx !== -1 && parent.children[idx + 1]) {
           return parent.children[idx + 1].textContent.trim();
         }
@@ -19,7 +19,7 @@
     return "";
   }
 
-  // Extract text across page, inputs, selects, and readable iframes (fallback)
+  // Fallback: Collect all page text
   function collectAllText() {
     let fullText = document.body ? (document.body.innerText || "") : "";
     
@@ -41,10 +41,12 @@
     return fullText;
   }
 
-  const ownerDOM = getOwnerFromDOM();
+  const ownerDOM = getFieldFromDOM("Owner");
+  const modelDOM = getFieldFromDOM("Model");
+  const serialDOM = getFieldFromDOM("Serial Number");
   const bodyText = collectAllText();
 
-  // 1. Company Map (Prioritizes McKesson if listed as the Owner)
+  // 1. Company Map
   const companyMap = [
     { pattern: /McKesson/i, name: "McKesson" },
     { pattern: /New England Life Care|NELC/i, name: "NELC" },
@@ -79,50 +81,58 @@
   // 2. Device Map
   const deviceMap = [
     { pattern: /Kangaroo\s*Omni|Omni/i, name: "Kangaroo Omni" },
-    { pattern: /Freedom\s*60/i, name: "Freedom 60" },
+    { pattern: /Kangaroo\s*Joey|Joey/i, name: "Joey" },
+    { pattern: /Infinity|EnteraLite/i, name: "Infinity" },
+    { pattern: /Curlin/i, name: "Curlin" },
+    { pattern: /Solis/i, name: "Solis" },
     { pattern: /Freedom\s*Edge/i, name: "Freedom Edge" },
-    { pattern: /Freedom/i, name: "Freedom 60" },
+    { pattern: /Freedom\s*60|Freedom/i, name: "Freedom 60" },
     { pattern: /Baxter\s*Fl(?:o|-)Gard|Fl(?:o|-)Gard/i, name: "Baxter Flo-Gard" },
     { pattern: /Baxter\s*Syringe/i, name: "Baxter Syringe" },
     { pattern: /Excelsior\s*Syringe/i, name: "Excelsior Syringe" },
     { pattern: /Cronos?\s*S-?PID/i, name: "Cronos S-PID" },
     { pattern: /Zyno\s*800F?/i, name: "Zyno 800F" },
     { pattern: /Vista\s*Basic|Vista/i, name: "Vista Basic" },
-    { pattern: /Infinity|Infinitys|EnteraLite/i, name: "Infinity" },
-    { pattern: /Curlin|Curlins/i, name: "Curlin" },
-    { pattern: /Solis/i, name: "Solis" },
-    { pattern: /Joey|Joeys/i, name: "Joey" },
     { pattern: /Sigma/i, name: "Sigma" },
     { pattern: /Sapphire/i, name: "Sapphire" }
   ];
 
   // --- SERIAL NUMBER EXTRACTION ---
-  let sn = "";
-  const snMatch = bodyText.match(/Serial\s*(?:Number|#)?\s*[:#-]?\s*([A-Za-z0-9]+)/i);
-
-  if (snMatch && snMatch[1].length >= 4) {
-    sn = snMatch[1].trim();
-  } else {
-    const patternMatch = 
-      bodyText.match(/\b(KS[A-Za-z0-9]{8,12})\b/i) ||
-      bodyText.match(/\b([FS]\d{7,9})\b/i)          ||
-      bodyText.match(/\b(\d{5,9})\b/);
-      
-    sn = patternMatch ? patternMatch[1].trim() : "";
-  }
-
-  // --- DEVICE DETECTION ---
-  let detectedDevice = "";
-  for (const d of deviceMap) {
-    if (d.pattern.test(bodyText)) {
-      detectedDevice = d.name;
-      break;
+  let sn = serialDOM || "";
+  if (!sn) {
+    const snMatch = bodyText.match(/Serial\s*(?:Number|#)?\s*[:#-]?\s*([A-Za-z0-9]+)/i);
+    if (snMatch && snMatch[1].length >= 4) {
+      sn = snMatch[1].trim();
+    } else {
+      const patternMatch = 
+        bodyText.match(/\b(KS[A-Za-z0-9]{8,12})\b/i) ||
+        bodyText.match(/\b([FS]\d{7,9})\b/i)          ||
+        bodyText.match(/\b(\d{5,9})\b/);
+      sn = patternMatch ? patternMatch[1].trim() : "";
     }
   }
 
-  // --- COMPANY DETECTION (Owner field checked first) ---
+  // --- DEVICE DETECTION (Model DOM field first) ---
+  let detectedDevice = "";
+  if (modelDOM) {
+    for (const d of deviceMap) {
+      if (d.pattern.test(modelDOM)) {
+        detectedDevice = d.name;
+        break;
+      }
+    }
+  }
+  if (!detectedDevice) {
+    for (const d of deviceMap) {
+      if (d.pattern.test(bodyText)) {
+        detectedDevice = d.name;
+        break;
+      }
+    }
+  }
+
+  // --- COMPANY DETECTION (Owner DOM field first) ---
   let detectedCompany = "";
-  
   if (ownerDOM) {
     for (const c of companyMap) {
       if (c.pattern.test(ownerDOM)) {
@@ -131,8 +141,6 @@
       }
     }
   }
-
-  // Fallback to searching the broader page text only if the Owner field is empty
   if (!detectedCompany) {
     for (const c of companyMap) {
       if (c.pattern.test(bodyText)) {
@@ -145,12 +153,17 @@
   const clean = str => (str || "").replace(/[\\/:*?"<>|]/g, "").trim();
 
   let finalCompany = clean(detectedCompany);
-  let finalDevice = clean(detectedDevice) || "Infinity";
+  let finalDevice = clean(detectedDevice);
   let finalSn = clean(sn);
 
   if (!finalCompany) {
-    finalCompany = prompt("Company not recognized automatically. Enter Company name (e.g. McKesson, NELC, Option Care):", "McKesson");
+    finalCompany = prompt("Company not recognized automatically. Enter Company name:", "Coram");
     if (!finalCompany) return;
+  }
+
+  if (!finalDevice) {
+    finalDevice = prompt("Device not recognized automatically. Enter Device name:", "Joey");
+    if (!finalDevice) return;
   }
 
   if (!finalSn) {
@@ -158,7 +171,7 @@
     if (!finalSn) return;
   }
 
-  const fileName = `${clean(finalCompany)} ${finalDevice} SN${clean(finalSn)} Repair Authorization Report.pdf`;
+  const fileName = `${clean(finalCompany)} ${clean(finalDevice)} SN${clean(finalSn)} Repair Authorization Report.pdf`;
 
   // --- CLIPBOARD ACTION ---
   function copyText(text) {
