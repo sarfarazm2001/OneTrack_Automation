@@ -78,9 +78,9 @@
     { pattern: /William\s*Bros/i, name: "William Bros" }
   ];
 
-  // 2. Device Map
+  // 2. Device Map ("Kangaroo" omitted from output names)
   const deviceMap = [
-    { pattern: /Kangaroo\s*Omni|Omni/i, name: "Kangaroo Omni" },
+    { pattern: /Kangaroo\s*Omni|Omni/i, name: "Omni" },
     { pattern: /Kangaroo\s*Joey|Joey/i, name: "Joey" },
     { pattern: /Infinity|EnteraLite/i, name: "Infinity" },
     { pattern: /Curlin/i, name: "Curlin" },
@@ -157,12 +157,12 @@
   let finalSn = clean(sn);
 
   if (!finalCompany) {
-    finalCompany = prompt("Company not recognized automatically. Enter Company name:", "Coram");
+    finalCompany = prompt("Company not recognized automatically. Enter Company name:", "McKesson");
     if (!finalCompany) return;
   }
 
   if (!finalDevice) {
-    finalDevice = prompt("Device not recognized automatically. Enter Device name:", "Joey");
+    finalDevice = prompt("Device not recognized automatically. Enter Device name:", "Omni");
     if (!finalDevice) return;
   }
 
@@ -171,7 +171,9 @@
     if (!finalSn) return;
   }
 
-  const fileName = `${clean(finalCompany)} ${clean(finalDevice)} SN${clean(finalSn)} Repair Authorization Report.pdf`;
+  // Format SN prefix: "SN " if starting with an alphabetical character, otherwise "SN"
+  const snPrefix = /^[A-Za-z]/.test(finalSn) ? "SN " : "SN";
+  const fileName = `${clean(finalCompany)} ${clean(finalDevice)} ${snPrefix}${clean(finalSn)} Repair Authorization Report.pdf`;
 
   // --- CLIPBOARD ACTION ---
   function copyText(text) {
