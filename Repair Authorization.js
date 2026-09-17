@@ -1,14 +1,32 @@
 (function(){
-  // Extract text across page, inputs, selects, and readable iframes
+  // Helper: Pulls text strictly from the "Owner" row in OneTrack
+  function getOwnerFromDOM() {
+    const labels = Array.from(document.querySelectorAll('td, th, label, span, div, p'));
+    const ownerLabel = labels.find(el => el.children.length === 0 && el.textContent.trim() === 'Owner');
+    
+    if (ownerLabel) {
+      if (ownerLabel.nextElementSibling) {
+        return ownerLabel.nextElementSibling.textContent.trim();
+      }
+      const parent = ownerLabel.parentElement;
+      if (parent && parent.children.length > 1) {
+        const idx = Array.from(parent.children).indexOf(ownerLabel);
+        if (idx !== -1 && parent.children[idx + 1]) {
+          return parent.children[idx + 1].textContent.trim();
+        }
+      }
+    }
+    return "";
+  }
+
+  // Extract text across page, inputs, selects, and readable iframes (fallback)
   function collectAllText() {
     let fullText = document.body ? (document.body.innerText || "") : "";
     
-    // Also pull values from input fields and select dropdowns (where OneTrack often stores customer)
     document.querySelectorAll("input, select, textarea").forEach(el => {
       if (el.value) fullText += " " + el.value;
     });
 
-    // Check accessible iframes
     document.querySelectorAll("iframe, frame").forEach(f => {
       try {
         const doc = f.contentDocument || (f.contentWindow && f.contentWindow.document);
@@ -23,10 +41,12 @@
     return fullText;
   }
 
+  const ownerDOM = getOwnerFromDOM();
   const bodyText = collectAllText();
 
-  // 1. Company Map (28 Companies)
+  // 1. Company Map (Prioritizes McKesson if listed as the Owner)
   const companyMap = [
+    { pattern: /McKesson/i, name: "McKesson" },
     { pattern: /New England Life Care|NELC/i, name: "NELC" },
     { pattern: /Adv(?:\.|anced)?\s*Infusion\s*Care/i, name: "Adv. Infusion Care" },
     { pattern: /AHN|Allegheny\s*Health\s*Network/i, name: "AHN" },
@@ -53,11 +73,10 @@
     { pattern: /Twel?veStone/i, name: "TwevleStone" },
     { pattern: /UNC\s*Homecare\s*Specialists/i, name: "UNC Homecare Specialists" },
     { pattern: /University\s*Hospitals/i, name: "University Hospitals" },
-    { pattern: /William\s*Bros/i, name: "William Bros" },
-    { pattern: /McKesson/i, name: "McKesson" }
+    { pattern: /William\s*Bros/i, name: "William Bros" }
   ];
 
-  // 2. Device Map (15 Devices)
+  // 2. Device Map
   const deviceMap = [
     { pattern: /Kangaroo\s*Omni|Omni/i, name: "Kangaroo Omni" },
     { pattern: /Freedom\s*60/i, name: "Freedom 60" },
@@ -85,9 +104,9 @@
     sn = snMatch[1].trim();
   } else {
     const patternMatch = 
-      bodyText.match(/\b(KS[A-Za-z0-9]{8,12})\b/i) ||  // Kangaroo Omni
-      bodyText.match(/\b([FS]\d{7,9})\b/i)          ||  // Joey, Freedom 60/Edge
-      bodyText.match(/\b(\d{5,9})\b/);                  // Infinity, Solis, Curlin, Vista, etc.
+      bodyText.match(/\b(KS[A-Za-z0-9]{8,12})\b/i) ||
+      bodyText.match(/\b([FS]\d{7,9})\b/i)          ||
+      bodyText.match(/\b(\d{5,9})\b/);
       
     sn = patternMatch ? patternMatch[1].trim() : "";
   }
@@ -101,12 +120,25 @@
     }
   }
 
-  // --- COMPANY DETECTION ---
+  // --- COMPANY DETECTION (Owner field checked first) ---
   let detectedCompany = "";
-  for (const c of companyMap) {
-    if (c.pattern.test(bodyText)) {
-      detectedCompany = c.name;
-      break;
+  
+  if (ownerDOM) {
+    for (const c of companyMap) {
+      if (c.pattern.test(ownerDOM)) {
+        detectedCompany = c.name;
+        break;
+      }
+    }
+  }
+
+  // Fallback to searching the broader page text only if the Owner field is empty
+  if (!detectedCompany) {
+    for (const c of companyMap) {
+      if (c.pattern.test(bodyText)) {
+        detectedCompany = c.name;
+        break;
+      }
     }
   }
 
@@ -116,13 +148,11 @@
   let finalDevice = clean(detectedDevice) || "Infinity";
   let finalSn = clean(sn);
 
-  // If company was not matched from the 28 known companies, ask so it doesn't default to "Company"
   if (!finalCompany) {
-    finalCompany = prompt("Company not recognized automatically. Enter Company name (e.g. NELC, Coram, Option Care):", "NELC");
+    finalCompany = prompt("Company not recognized automatically. Enter Company name (e.g. McKesson, NELC, Option Care):", "McKesson");
     if (!finalCompany) return;
   }
 
-  // If SN is missing, prompt
   if (!finalSn) {
     finalSn = prompt("Serial Number not detected. Enter Serial #:", "");
     if (!finalSn) return;
