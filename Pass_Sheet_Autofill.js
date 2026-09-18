@@ -92,36 +92,48 @@
 
   function createMultiSelectModal(title,options,callback,onBack){
     let overlay=document.createElement('div');
-    overlay.style.cssText='position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:99999;display:flex;align-items:center;justify-content:center;font-family:sans-serif;';
+    overlay.style.cssText='position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.65);z-index:99999;display:flex;align-items:center;justify-content:center;font-family:sans-serif;';
     let box=document.createElement('div');
-    box.style.cssText='background:#fff;padding:20px;border-radius:8px;box-shadow:0 4px 10px rgba(0,0,0,0.3);min-width:300px;max-width:400px;text-align:left;color:#333;';
+    box.style.cssText='background:#1e2329;border:1px solid #2d333b;padding:22px;border-radius:8px;box-shadow:0 4px 15px rgba(0,0,0,0.5);width:320px;text-align:left;color:#e1e4ea;';
+    
     let heading=document.createElement('h3');
     heading.innerText=title;
-    heading.style.cssText='margin-top:0;margin-bottom:15px;font-size:16px;color:#222;text-align:center;';
+    heading.style.cssText='margin-top:0;margin-bottom:15px;font-size:16px;color:#fff;text-align:center;';
     box.appendChild(heading);
 
     let container=document.createElement('div');
-    container.style.cssText='max-height:200px;overflow-y:auto;margin-bottom:15px;';
+    container.style.cssText='max-height:180px;overflow-y:auto;margin-bottom:12px;';
     options.forEach(opt=>{
       let lbl=document.createElement('label');
-      lbl.style.cssText='display:flex;align-items:center;padding:6px;cursor:pointer;font-size:14px;';
+      lbl.style.cssText='display:flex;align-items:center;padding:5px 0;cursor:pointer;font-size:14px;font-weight:600;';
       let chk=document.createElement('input');
       chk.type='checkbox';
       chk.value=opt;
-      chk.style.cssText='margin-right:10px;transform:scale(1.2);';
+      chk.style.cssText='margin-right:10px;transform:scale(1.2);accent-color:#3b82f6;cursor:pointer;';
       lbl.appendChild(chk);
       lbl.appendChild(document.createTextNode(opt));
       container.appendChild(lbl);
     });
     box.appendChild(container);
 
+    // Custom TE / Number Input Row
+    let customDiv=document.createElement('div');
+    customDiv.style.cssText='margin-bottom:15px;border-top:1px solid #2d333b;padding-top:10px;';
+    customDiv.innerHTML=`<div style="font-size:11px;color:#8b949e;margin-bottom:5px;font-weight:600;text-transform:uppercase;">Custom / Extra TE #:</div><input id="custom_te_input" type="text" placeholder="e.g. 99TR or 123" style="width:100%;box-sizing:border-box;padding:8px;background:#0d1117;border:1px solid #30363d;color:#c9d1d9;border-radius:4px;font-size:13px;outline:none;">`;
+    box.appendChild(customDiv);
+
     let btnBox=document.createElement('div');
     btnBox.style.cssText='display:flex;gap:6px;';
+    
     let submitBtn=document.createElement('button');
     submitBtn.innerText='Confirm';
-    submitBtn.style.cssText='flex:1;padding:10px;background:#28a745;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:12px;font-weight:bold;';
+    submitBtn.style.cssText='flex:1;padding:10px;background:#28a745;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:13px;font-weight:bold;';
     submitBtn.onclick=()=>{
       let selected=Array.from(container.querySelectorAll('input[type="checkbox"]:checked')).map(c=>c.value);
+      let customVal=document.getElementById('custom_te_input').value.trim();
+      if(customVal){
+        selected.push(customVal);
+      }
       document.body.removeChild(overlay);
       callback(selected);
     };
@@ -129,7 +141,7 @@
 
     let backBtn=document.createElement('button');
     backBtn.innerText='Back';
-    backBtn.style.cssText='flex:1;padding:10px;background:#6c757d;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:12px;font-weight:bold;';
+    backBtn.style.cssText='flex:1;padding:10px;background:#6c757d;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:13px;font-weight:bold;';
     backBtn.onclick=()=>{
       document.body.removeChild(overlay);
       if(onBack)onBack();
@@ -138,7 +150,7 @@
 
     let cancelBtn=document.createElement('button');
     cancelBtn.innerText='Cancel';
-    cancelBtn.style.cssText='flex:1;padding:10px;background:#dc3545;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:12px;font-weight:bold;';
+    cancelBtn.style.cssText='flex:1;padding:10px;background:#dc3545;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:13px;font-weight:bold;';
     cancelBtn.onclick=()=>document.body.removeChild(overlay);
     btnBox.appendChild(cancelBtn);
 
