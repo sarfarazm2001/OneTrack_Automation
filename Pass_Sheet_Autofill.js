@@ -140,8 +140,8 @@
     });
     box.appendChild(container);
 
-    // Only inject Calibrated Set Weight input if the active device is CURLIN
-    const isCurlin = deviceKey === 'CURLIN';
+    // ONLY show Calibrated Set Weight if device is strictly CURLIN
+    const isCurlin = String(deviceKey).toUpperCase() === 'CURLIN';
     if(isCurlin){
       let customDiv=document.createElement('div');
       customDiv.style.cssText='margin-bottom:16px;border-top:1px solid #2d333b;padding-top:12px;';
@@ -158,7 +158,8 @@
     submitBtn.onclick=()=>{
       let selected=Array.from(container.querySelectorAll('.te_chk_hidden:checked')).map(c=>c.value);
       if(isCurlin){
-        let customVal=document.getElementById('custom_te_input').value.trim();
+        const inp = document.getElementById('custom_te_input');
+        let customVal=inp ? inp.value.trim() : '';
         if(customVal){
           selected.push(customVal);
         }
