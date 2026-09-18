@@ -98,7 +98,7 @@
     
     let heading=document.createElement('h3');
     heading.innerText=title;
-    heading.style.cssText='margin-top:0;margin-bottom:16px;font-size:16px;color:#fff;text-align:center;font-weight:700;letter-spacing:0.3px;';
+    heading.style.cssText='margin-top:0;margin-bottom:16px;font-size:16px;color:#fff;text-align:center;font-weight:700;';
     box.appendChild(heading);
 
     let container=document.createElement('div');
@@ -106,28 +106,37 @@
     
     options.forEach(opt=>{
       let lbl=document.createElement('label');
-      lbl.style.cssText='display:flex;align-items:center;padding:7px 8px;cursor:pointer;font-size:14px;font-weight:500;border-radius:6px;transition:background 0.15s ease;margin-bottom:3px;';
+      lbl.style.cssText='display:flex;align-items:center;padding:7px 8px;cursor:pointer;font-size:14px;font-weight:500;border-radius:6px;user-select:none;margin-bottom:3px;';
       lbl.onmouseover=()=>lbl.style.background='#272d36';
       lbl.onmouseout=()=>lbl.style.background='transparent';
 
+      // Hidden native checkbox
       let chk=document.createElement('input');
       chk.type='checkbox';
       chk.value=opt;
-      // Clean modern checkbox design removing browser dark-mode artifact
-      chk.style.cssText='appearance:none;-webkit-appearance:none;width:17px;height:17px;border:2px solid #484f58;border-radius:4px;background:#0d1117;cursor:pointer;margin-right:12px;position:relative;flex-shrink:0;outline:none;transition:all 0.15s ease;display:grid;place-content:center;';
-      chk.addEventListener('change', () => {
+      chk.className='te_chk_hidden';
+      chk.style.display='none';
+
+      // Custom smooth span icon (immune to browser dark-mode distortions)
+      let customBox=document.createElement('span');
+      customBox.style.cssText='width:16px;height:16px;border:1.5px solid #484f58;border-radius:4px;background:#0d1117;margin-right:12px;display:flex;align-items:center;justify-content:center;flex-shrink:0;box-sizing:border-box;';
+
+      lbl.onclick=(e)=>{
+        e.preventDefault();
+        chk.checked=!chk.checked;
         if(chk.checked){
-          chk.style.background='#3b82f6';
-          chk.style.borderColor='#3b82f6';
-          chk.innerHTML='<svg viewBox="0 0 14 14" style="width:11px;height:11px;fill:none;stroke:#fff;stroke-width:2.5;stroke-linecap:round;stroke-linejoin:round;"><path d="M2.5 7L5.5 10L11.5 3.5"></path></svg>';
+          customBox.style.background='#3b82f6';
+          customBox.style.borderColor='#3b82f6';
+          customBox.innerHTML='<svg viewBox="0 0 14 14" style="width:10px;height:10px;display:block;" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 7L5.5 10L11.5 3.5"/></svg>';
         } else {
-          chk.style.background='#0d1117';
-          chk.style.borderColor='#484f58';
-          chk.innerHTML='';
+          customBox.style.background='#0d1117';
+          customBox.style.borderColor='#484f58';
+          customBox.innerHTML='';
         }
-      });
+      };
 
       lbl.appendChild(chk);
+      lbl.appendChild(customBox);
       lbl.appendChild(document.createTextNode(opt));
       container.appendChild(lbl);
     });
@@ -135,7 +144,7 @@
 
     let customDiv=document.createElement('div');
     customDiv.style.cssText='margin-bottom:16px;border-top:1px solid #2d333b;padding-top:12px;';
-    customDiv.innerHTML=`<div style="font-size:11px;color:#8b949e;margin-bottom:6px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;">Calibrated Set Weight</div><input id="custom_te_input" type="text" style="width:100%;box-sizing:border-box;padding:9px 10px;background:#0d1117;border:1px solid #30363d;color:#f0f6fc;border-radius:6px;font-size:13px;outline:none;transition:border-color 0.15s ease;" onfocus="this.style.borderColor='#58a6ff'" onblur="this.style.borderColor='#30363d'">`;
+    customDiv.innerHTML=`<div style="font-size:11px;color:#8b949e;margin-bottom:6px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;">Calibrated Set Weight</div><input id="custom_te_input" type="text" style="width:100%;box-sizing:border-box;padding:9px 10px;background:#0d1117;border:1px solid #30363d;color:#f0f6fc;border-radius:6px;font-size:13px;outline:none;" onfocus="this.style.borderColor='#58a6ff'" onblur="this.style.borderColor='#30363d'">`;
     box.appendChild(customDiv);
 
     let btnBox=document.createElement('div');
@@ -145,7 +154,7 @@
     submitBtn.innerText='Confirm';
     submitBtn.style.cssText='flex:1;padding:9px;background:#238636;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:13px;font-weight:600;';
     submitBtn.onclick=()=>{
-      let selected=Array.from(container.querySelectorAll('input[type="checkbox"]:checked')).map(c=>c.value);
+      let selected=Array.from(container.querySelectorAll('.te_chk_hidden:checked')).map(c=>c.value);
       let customVal=document.getElementById('custom_te_input').value.trim();
       if(customVal){
         selected.push(customVal);
