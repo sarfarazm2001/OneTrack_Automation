@@ -90,7 +90,7 @@
     return saved?JSON.parse(saved):DEFAULT_DATA;
   }
 
-  function createMultiSelectModal(title,options,callback,onBack){
+  function createMultiSelectModal(title,options,deviceKey,callback,onBack){
     let overlay=document.createElement('div');
     overlay.style.cssText='position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.65);z-index:99999;display:flex;align-items:center;justify-content:center;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;';
     let box=document.createElement('div');
@@ -110,14 +110,12 @@
       lbl.onmouseover=()=>lbl.style.background='#272d36';
       lbl.onmouseout=()=>lbl.style.background='transparent';
 
-      // Hidden native checkbox
       let chk=document.createElement('input');
       chk.type='checkbox';
       chk.value=opt;
       chk.className='te_chk_hidden';
       chk.style.display='none';
 
-      // Custom smooth span icon (immune to browser dark-mode distortions)
       let customBox=document.createElement('span');
       customBox.style.cssText='width:16px;height:16px;border:1.5px solid #484f58;border-radius:4px;background:#0d1117;margin-right:12px;display:flex;align-items:center;justify-content:center;flex-shrink:0;box-sizing:border-box;';
 
@@ -142,10 +140,14 @@
     });
     box.appendChild(container);
 
-    let customDiv=document.createElement('div');
-    customDiv.style.cssText='margin-bottom:16px;border-top:1px solid #2d333b;padding-top:12px;';
-    customDiv.innerHTML=`<div style="font-size:11px;color:#8b949e;margin-bottom:6px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;">Calibrated Set Weight</div><input id="custom_te_input" type="text" style="width:100%;box-sizing:border-box;padding:9px 10px;background:#0d1117;border:1px solid #30363d;color:#f0f6fc;border-radius:6px;font-size:13px;outline:none;" onfocus="this.style.borderColor='#58a6ff'" onblur="this.style.borderColor='#30363d'">`;
-    box.appendChild(customDiv);
+    // Only inject Calibrated Set Weight input if the active device is CURLIN
+    const isCurlin = deviceKey === 'CURLIN';
+    if(isCurlin){
+      let customDiv=document.createElement('div');
+      customDiv.style.cssText='margin-bottom:16px;border-top:1px solid #2d333b;padding-top:12px;';
+      customDiv.innerHTML=`<div style="font-size:11px;color:#8b949e;margin-bottom:6px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;">Calibrated Set Weight</div><input id="custom_te_input" type="text" style="width:100%;box-sizing:border-box;padding:9px 10px;background:#0d1117;border:1px solid #30363d;color:#f0f6fc;border-radius:6px;font-size:13px;outline:none;" onfocus="this.style.borderColor='#58a6ff'" onblur="this.style.borderColor='#30363d'">`;
+      box.appendChild(customDiv);
+    }
 
     let btnBox=document.createElement('div');
     btnBox.style.cssText='display:flex;gap:7px;';
@@ -155,9 +157,11 @@
     submitBtn.style.cssText='flex:1;padding:9px;background:#238636;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:13px;font-weight:600;';
     submitBtn.onclick=()=>{
       let selected=Array.from(container.querySelectorAll('.te_chk_hidden:checked')).map(c=>c.value);
-      let customVal=document.getElementById('custom_te_input').value.trim();
-      if(customVal){
-        selected.push(customVal);
+      if(isCurlin){
+        let customVal=document.getElementById('custom_te_input').value.trim();
+        if(customVal){
+          selected.push(customVal);
+        }
       }
       document.body.removeChild(overlay);
       callback(selected);
@@ -255,7 +259,7 @@
       let teText=(availableTEs[0]==='N/A')?`TE: N/A`:`TE: ${availableTEs[0]}`;
       finalizeAndNext(teText);
     } else if(availableTEs.length>1){
-      createMultiSelectModal(`Select TE(s) for ${selectedDevice}`,availableTEs,(selectedTEs)=>{
+      createMultiSelectModal(`Select TE(s) for ${selectedDevice}`,availableTEs,selectedDevice,(selectedTEs)=>{
         if(selectedTEs.length){
           let teText=`TE: ${selectedTEs.join(', ')}`;
           finalizeAndNext(teText);
