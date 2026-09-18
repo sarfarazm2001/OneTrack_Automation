@@ -92,42 +92,58 @@
 
   function createMultiSelectModal(title,options,callback,onBack){
     let overlay=document.createElement('div');
-    overlay.style.cssText='position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.65);z-index:99999;display:flex;align-items:center;justify-content:center;font-family:sans-serif;';
+    overlay.style.cssText='position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.65);z-index:99999;display:flex;align-items:center;justify-content:center;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;';
     let box=document.createElement('div');
-    box.style.cssText='background:#1e2329;border:1px solid #2d333b;padding:22px;border-radius:8px;box-shadow:0 4px 15px rgba(0,0,0,0.5);width:320px;text-align:left;color:#e1e4ea;';
+    box.style.cssText='background:#1e2329;border:1px solid #2d333b;padding:22px;border-radius:10px;box-shadow:0 8px 30px rgba(0,0,0,0.6);width:320px;text-align:left;color:#e1e4ea;';
     
     let heading=document.createElement('h3');
     heading.innerText=title;
-    heading.style.cssText='margin-top:0;margin-bottom:15px;font-size:16px;color:#fff;text-align:center;';
+    heading.style.cssText='margin-top:0;margin-bottom:16px;font-size:16px;color:#fff;text-align:center;font-weight:700;letter-spacing:0.3px;';
     box.appendChild(heading);
 
     let container=document.createElement('div');
-    container.style.cssText='max-height:180px;overflow-y:auto;margin-bottom:12px;';
+    container.style.cssText='max-height:190px;overflow-y:auto;margin-bottom:14px;padding-right:4px;';
+    
     options.forEach(opt=>{
       let lbl=document.createElement('label');
-      lbl.style.cssText='display:flex;align-items:center;padding:5px 0;cursor:pointer;font-size:14px;font-weight:600;';
+      lbl.style.cssText='display:flex;align-items:center;padding:7px 8px;cursor:pointer;font-size:14px;font-weight:500;border-radius:6px;transition:background 0.15s ease;margin-bottom:3px;';
+      lbl.onmouseover=()=>lbl.style.background='#272d36';
+      lbl.onmouseout=()=>lbl.style.background='transparent';
+
       let chk=document.createElement('input');
       chk.type='checkbox';
       chk.value=opt;
-      chk.style.cssText='margin-right:10px;transform:scale(1.2);accent-color:#3b82f6;cursor:pointer;';
+      // Clean modern checkbox design removing browser dark-mode artifact
+      chk.style.cssText='appearance:none;-webkit-appearance:none;width:17px;height:17px;border:2px solid #484f58;border-radius:4px;background:#0d1117;cursor:pointer;margin-right:12px;position:relative;flex-shrink:0;outline:none;transition:all 0.15s ease;display:grid;place-content:center;';
+      chk.addEventListener('change', () => {
+        if(chk.checked){
+          chk.style.background='#3b82f6';
+          chk.style.borderColor='#3b82f6';
+          chk.innerHTML='<svg viewBox="0 0 14 14" style="width:11px;height:11px;fill:none;stroke:#fff;stroke-width:2.5;stroke-linecap:round;stroke-linejoin:round;"><path d="M2.5 7L5.5 10L11.5 3.5"></path></svg>';
+        } else {
+          chk.style.background='#0d1117';
+          chk.style.borderColor='#484f58';
+          chk.innerHTML='';
+        }
+      });
+
       lbl.appendChild(chk);
       lbl.appendChild(document.createTextNode(opt));
       container.appendChild(lbl);
     });
     box.appendChild(container);
 
-    // Calibrated Set Weight input field (clean with no placeholder text)
     let customDiv=document.createElement('div');
-    customDiv.style.cssText='margin-bottom:15px;border-top:1px solid #2d333b;padding-top:10px;';
-    customDiv.innerHTML=`<div style="font-size:11px;color:#8b949e;margin-bottom:5px;font-weight:600;text-transform:uppercase;">Calibrated Set Weight</div><input id="custom_te_input" type="text" style="width:100%;box-sizing:border-box;padding:8px;background:#0d1117;border:1px solid #30363d;color:#c9d1d9;border-radius:4px;font-size:13px;outline:none;">`;
+    customDiv.style.cssText='margin-bottom:16px;border-top:1px solid #2d333b;padding-top:12px;';
+    customDiv.innerHTML=`<div style="font-size:11px;color:#8b949e;margin-bottom:6px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;">Calibrated Set Weight</div><input id="custom_te_input" type="text" style="width:100%;box-sizing:border-box;padding:9px 10px;background:#0d1117;border:1px solid #30363d;color:#f0f6fc;border-radius:6px;font-size:13px;outline:none;transition:border-color 0.15s ease;" onfocus="this.style.borderColor='#58a6ff'" onblur="this.style.borderColor='#30363d'">`;
     box.appendChild(customDiv);
 
     let btnBox=document.createElement('div');
-    btnBox.style.cssText='display:flex;gap:6px;';
+    btnBox.style.cssText='display:flex;gap:7px;';
     
     let submitBtn=document.createElement('button');
     submitBtn.innerText='Confirm';
-    submitBtn.style.cssText='flex:1;padding:10px;background:#28a745;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:13px;font-weight:bold;';
+    submitBtn.style.cssText='flex:1;padding:9px;background:#238636;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:13px;font-weight:600;';
     submitBtn.onclick=()=>{
       let selected=Array.from(container.querySelectorAll('input[type="checkbox"]:checked')).map(c=>c.value);
       let customVal=document.getElementById('custom_te_input').value.trim();
@@ -141,7 +157,7 @@
 
     let backBtn=document.createElement('button');
     backBtn.innerText='Back';
-    backBtn.style.cssText='flex:1;padding:10px;background:#6c757d;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:13px;font-weight:bold;';
+    backBtn.style.cssText='flex:1;padding:9px;background:#30363d;color:#c9d1d9;border:1px solid #484f58;border-radius:6px;cursor:pointer;font-size:13px;font-weight:600;';
     backBtn.onclick=()=>{
       document.body.removeChild(overlay);
       if(onBack)onBack();
@@ -150,7 +166,7 @@
 
     let cancelBtn=document.createElement('button');
     cancelBtn.innerText='Cancel';
-    cancelBtn.style.cssText='flex:1;padding:10px;background:#dc3545;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:13px;font-weight:bold;';
+    cancelBtn.style.cssText='flex:1;padding:9px;background:#da3633;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:13px;font-weight:600;';
     cancelBtn.onclick=()=>document.body.removeChild(overlay);
     btnBox.appendChild(cancelBtn);
 
