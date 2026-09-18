@@ -116,10 +116,10 @@
     });
     box.appendChild(container);
 
-    // Custom TE / Number Input Row
+    // Calibrated Set Weight input field (clean with no placeholder text)
     let customDiv=document.createElement('div');
     customDiv.style.cssText='margin-bottom:15px;border-top:1px solid #2d333b;padding-top:10px;';
-    customDiv.innerHTML=`<div style="font-size:11px;color:#8b949e;margin-bottom:5px;font-weight:600;text-transform:uppercase;">Custom / Extra TE #:</div><input id="custom_te_input" type="text" placeholder="e.g. 99TR or 123" style="width:100%;box-sizing:border-box;padding:8px;background:#0d1117;border:1px solid #30363d;color:#c9d1d9;border-radius:4px;font-size:13px;outline:none;">`;
+    customDiv.innerHTML=`<div style="font-size:11px;color:#8b949e;margin-bottom:5px;font-weight:600;text-transform:uppercase;">Calibrated Set Weight</div><input id="custom_te_input" type="text" style="width:100%;box-sizing:border-box;padding:8px;background:#0d1117;border:1px solid #30363d;color:#c9d1d9;border-radius:4px;font-size:13px;outline:none;">`;
     box.appendChild(customDiv);
 
     let btnBox=document.createElement('div');
