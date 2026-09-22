@@ -61,7 +61,7 @@
     { name: "NLT - HEADER, IDC, 5 POS", pn: "40-6288-24A" },
     { name: "OVERLAY, MEMBRANE SWITCH, CE ENGLISH", pn: "31-0993" },
     { name: "PAD, GND, L/L SENSOR", pn: "70-0171" },
-    { name: "PCBA, CADD-SOLIS, FUSED" },
+    { name: "PCBA, CADD-SOLIS, FUSED", pn: "N/A" },
     { name: "PCBA, CADD-SOLIS, TRULY/HIMAX LCD, FLASH MEMORY UPGRADE", pn: "30-4712" },
     { name: "PIN, CASSETTE DETECTOR", pn: "10015258-001" },
     { name: "PLATE, AY, GROUNDING", pn: "30-3163" },
@@ -78,7 +78,7 @@
     { name: "TAPE, ADHESIVE, PIEZO GUARD", pn: "N/A" },
     { name: "TAPE, LCD HOLD DOWN", pn: "30-3306" },
     { name: "TAPE, POGO CONTACT", pn: "30-4085" },
-    { name: "VALVE, DUAL ACTIVATION, CADD-SOLIS", pn: "30-3063" },
+    { name: "VALVE, DUAL ACTIVATION, CADD-SOLIS", pn: "30-3063" }
   ];
 
   let overlay = document.createElement("div");
@@ -90,7 +90,7 @@
   let html = `<h3 style="margin-top:0;margin-bottom:12px;font-size:16px;text-align:center;color:#222;">Solis Findings Generator</h3><div style="max-height:300px;overflow-y:auto;margin-bottom:15px;">`;
 
   parts.forEach((p) => {
-    html += `<label style="display:flex;align-items:center;justify-content:space-between;padding:4px 0;font-size:12px;cursor:pointer;border-bottom:1px solid #f0f0f0;"><span style="display:flex;align-items:center;margin-right:10px;"><input type="checkbox" class="s_chk" value="${p.name}" style="margin-right:8px;transform:scale(1.1);flex-shrink:0;">${p.name}</span><span style="color:#666;font-family:monospace;white-space:nowrap;">${p.pn}</span></label>`;
+    html += `<label style="display:flex;align-items:center;justify-content:space-between;padding:4px 0;font-size:12px;cursor:pointer;border-bottom:1px solid #f0f0f0;"><span style="display:flex;align-items:center;margin-right:10px;"><input type="checkbox" class="s_chk" data-pn="${p.pn}" value="${p.name}" style="margin-right:8px;transform:scale(1.1);flex-shrink:0;">${p.name}</span><span style="color:#666;font-family:monospace;white-space:nowrap;">${p.pn}</span></label>`;
   });
 
   html += `</div><div style="display:flex;gap:8px;"><button id="s_back" style="flex:1;padding:10px;background:#6c757d;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:13px;font-weight:bold;">← Back</button><button id="s_copy" style="flex:1.2;padding:10px;background:#28a745;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:13px;font-weight:bold;">Apply</button><button id="s_cancel" style="flex:1;padding:10px;background:#dc3545;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:13px;font-weight:bold;">Cancel</button></div>`;
@@ -102,27 +102,23 @@
   document.getElementById("s_cancel").onclick = () => document.body.removeChild(overlay);
   document.getElementById("s_back").onclick = () => {
     document.body.removeChild(overlay);
-    if (window.reopenOEMLauncher) window.reopenOEMLauncher();
+    if (window.reopenMasterLauncher) window.reopenMasterLauncher();
+    else if (window.reopenOEMLauncher) window.reopenOEMLauncher();
   };
 
   document.getElementById("s_copy").onclick = () => {
-    const laborLabel = "Hub Service Labor Rate (ONLY SELECT WHEN NO PROBLEM FOUND BY OEM)";
-    let selectedParts = Array.from(box.querySelectorAll(".s_chk:checked")).map((cb) => cb.value);
-
-    let physicalParts = selectedParts.filter((p) => p !== laborLabel);
-    let hasLabor = selectedParts.includes(laborLabel);
+    let checkedBoxes = Array.from(box.querySelectorAll(".s_chk:checked"));
+    let physicalParts = checkedBoxes.filter(cb => cb.dataset.pn !== "LABOR").map(cb => cb.value);
+    let hasLabor = checkedBoxes.some(cb => cb.dataset.pn === "LABOR");
 
     let text = "";
     const testBlock = "Visual Inspection, Pump Power Up Test, Motor Test, Remote Dose Test, Keypad Test, Latch Lock Test, Disposable Test, Air Detector Test, Verify Air Detector Height, LCD Screen Inspection, Amber Green and LED Functional Test, Adjust LCD POT Screen, Downstream Occlusion Test, Upstream Occlusion Sensor Test, Battery Fallout Test, 50ml Cassette Test, Go_No_Go Test, and Delivery Accuracy Test 20mL.";
 
     if (hasLabor && physicalParts.length === 0) {
-      // ONLY Hub Service Labor Rate selected: excludes "parts replaced" section
       text = `The OEM certifies that the device passes the following: ${testBlock}`;
     } else if (physicalParts.length > 0) {
-      // Replaced parts selected (with or without labor)
       text = `Per the OEM, the following parts have been replaced: ${physicalParts.join(", ")} and passed the related testing. The OEM also certifies that the device passes the following: ${testBlock}`;
     } else {
-      // Nothing selected
       text = `The OEM certifies that the device passes the following: ${testBlock}`;
     }
 
