@@ -3,17 +3,12 @@
   function getFieldFromDOM(labelText) {
     const labels = Array.from(document.querySelectorAll('td, th, label, span, div, p'));
     const target = labels.find(el => el.children.length === 0 && el.textContent.trim().toLowerCase() === labelText.toLowerCase());
-    
     if (target) {
-      if (target.nextElementSibling) {
-        return target.nextElementSibling.textContent.trim();
-      }
+      if (target.nextElementSibling) return target.nextElementSibling.textContent.trim();
       const parent = target.parentElement;
       if (parent && parent.children.length > 1) {
         const idx = Array.from(parent.children).indexOf(target);
-        if (idx !== -1 && parent.children[idx + 1]) {
-          return parent.children[idx + 1].textContent.trim();
-        }
+        if (idx !== -1 && parent.children[idx + 1]) return parent.children[idx + 1].textContent.trim();
       }
     }
     return "";
@@ -22,26 +17,12 @@
   // Fallback: Collect all page text
   function collectAllText() {
     let fullText = document.body ? (document.body.innerText || "") : "";
-    
     document.querySelectorAll("input, select, textarea").forEach(el => {
       if (el.value) fullText += " " + el.value;
-    });
-
-    document.querySelectorAll("iframe, frame").forEach(f => {
-      try {
-        const doc = f.contentDocument || (f.contentWindow && f.contentWindow.document);
-        if (doc && doc.body) {
-          fullText += " " + doc.body.innerText;
-          doc.querySelectorAll("input, select").forEach(el => {
-            if (el.value) fullText += " " + el.value;
-          });
-        }
-      } catch(e){}
     });
     return fullText;
   }
 
-  // 1. Company Map
   const companyMap = [
     { pattern: /Patient-?Owned/i, name: "Patient-Owned" },
     { pattern: /McKesson/i, name: "McKesson" },
@@ -74,7 +55,6 @@
     { pattern: /William\s*Bros/i, name: "William Bros" }
   ];
 
-  // 2. Device Map
   const deviceMap = [
     { pattern: /Kangaroo\s*Omni|Omni/i, name: "Omni" },
     { pattern: /Kangaroo\s*Joey|Joey/i, name: "Joey" },
@@ -93,140 +73,114 @@
     { pattern: /Sapphire/i, name: "Sapphire" }
   ];
 
-  function generateFilename() {
-    const ownerDOM = getFieldFromDOM("Owner");
-    const modelDOM = getFieldFromDOM("Model");
-    const serialDOM = getFieldFromDOM("Serial Number");
-    const bodyText = collectAllText();
+  const ownerDOM = getFieldFromDOM("Owner");
+  const modelDOM = getFieldFromDOM("Model");
+  const serialDOM = getFieldFromDOM("Serial Number");
+  const bodyText = collectAllText();
 
-    let sn = serialDOM || "";
-    if (!sn) {
-      const snMatch = bodyText.match(/Serial\s*(?:Number|#)?\s*[:#-]?\s*([A-Za-z0-9]+)/i);
-      if (snMatch && snMatch[1].length >= 4) {
-        sn = snMatch[1].trim();
-      } else {
-        const patternMatch = 
-          bodyText.match(/\b(KS[A-Za-z0-9]{8,12})\b/i) ||
-          bodyText.match(/\b([FS]\d{7,9})\b/i)          ||
-          bodyText.match(/\b(\d{5,9})\b/);
-        sn = patternMatch ? patternMatch[1].trim() : "";
-      }
+  // Serial Number Extraction
+  let sn = serialDOM || "";
+  if (!sn) {
+    const snMatch = bodyText.match(/Serial\s*(?:Number|#)?\s*[:#-]?\s*([A-Za-z0-9]+)/i);
+    if (snMatch && snMatch[1].length >= 4) {
+      sn = snMatch[1].trim();
+    } else {
+      const patternMatch = 
+        bodyText.match(/\b(KS[A-Za-z0-9]{8,12})\b/i) ||
+        bodyText.match(/\b([FS]\d{7,9})\b/i)          ||
+        bodyText.match(/\b(\d{5,9})\b/);
+      sn = patternMatch ? patternMatch[1].trim() : "";
     }
-
-    let detectedDevice = "";
-    if (modelDOM) {
-      for (const d of deviceMap) {
-        if (d.pattern.test(modelDOM)) { detectedDevice = d.name; break; }
-      }
-    }
-    if (!detectedDevice) {
-      for (const d of deviceMap) {
-        if (d.pattern.test(bodyText)) { detectedDevice = d.name; break; }
-      }
-    }
-
-    let detectedCompany = "";
-    if (ownerDOM) {
-      for (const c of companyMap) {
-        if (c.pattern.test(ownerDOM)) { detectedCompany = c.name; break; }
-      }
-    }
-    if (!detectedCompany) {
-      for (const c of companyMap) {
-        if (c.pattern.test(bodyText)) { detectedCompany = c.name; break; }
-      }
-    }
-
-    const clean = str => (str || "").replace(/[\\/:*?"<>|]/g, "").trim();
-    let finalCompany = clean(detectedCompany) || "Patient-Owned";
-    let finalDevice = clean(detectedDevice) || "Joey";
-    let finalSn = clean(sn);
-
-    if (!finalSn) {
-      finalSn = prompt("Serial Number not detected. Enter Serial #:", "");
-      if (!finalSn) return "";
-    }
-
-    const snPrefix = /^[A-Za-z]/.test(finalSn) ? "SN " : "SN";
-    return `${clean(finalCompany)} ${clean(finalDevice)} ${snPrefix}${clean(finalSn)} Repair Authorization Report.pdf`;
   }
 
-  function copyText(text) {
-    if (navigator.clipboard && navigator.clipboard.writeText) {
-      return navigator.clipboard.writeText(text);
+  // Device Detection
+  let detectedDevice = "";
+  if (modelDOM) {
+    for (const d of deviceMap) {
+      if (d.pattern.test(modelDOM)) { detectedDevice = d.name; break; }
     }
-    return new Promise((resolve, reject) => {
-      const ta = document.createElement("textarea");
-      ta.value = text;
-      ta.style.position = "fixed";
-      ta.style.opacity = "0";
-      document.body.appendChild(ta);
-      ta.focus();
-      ta.select();
-      try {
-        document.execCommand("copy") ? resolve() : reject();
-      } catch(e) { reject(e); }
-      document.body.removeChild(ta);
-    });
+  }
+  if (!detectedDevice) {
+    for (const d of deviceMap) {
+      if (d.pattern.test(bodyText)) { detectedDevice = d.name; break; }
+    }
   }
 
-  function showNotification(fileName) {
-    const toast = document.createElement("div");
-    toast.style.cssText = "position:fixed;bottom:24px;right:24px;background:#1a1d1f;color:#4ade80;border:1px solid #2d3238;padding:14px 20px;border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,0.6);z-index:9999999;font-family:sans-serif;font-size:13px;max-width:420px;line-height:1.5;";
-    toast.innerHTML = `
-      <div style="font-weight:bold;color:#fff;margin-bottom:4px;">Ready to Paste!</div>
-      <div style="color:#cbd2d9;font-family:monospace;font-size:12px;word-break:break-all;">${fileName}</div>
-      <div style="color:#9aa0a6;font-size:11px;margin-top:6px;">Opening Report Printout... Press <b>Ctrl + V</b> when saving the PDF.</div>
-    `;
-    document.body.appendChild(toast);
-    setTimeout(() => toast.remove(), 4000);
+  // Company Detection
+  let detectedCompany = "";
+  if (ownerDOM) {
+    for (const c of companyMap) {
+      if (c.pattern.test(ownerDOM)) { detectedCompany = c.name; break; }
+    }
+  }
+  if (!detectedCompany) {
+    for (const c of companyMap) {
+      if (c.pattern.test(bodyText)) { detectedCompany = c.name; break; }
+    }
   }
 
-  function executePrintFlow(originalFn) {
-    const fileName = generateFilename();
-    if (!fileName) return;
+  const clean = str => (str || "").replace(/[\\/:*?"<>|]/g, "").trim();
+  let finalCompany = clean(detectedCompany) || "Patient-Owned";
+  let finalDevice = clean(detectedDevice) || "Joey";
+  let finalSn = clean(sn);
 
-    copyText(fileName).then(() => {
-      showNotification(fileName);
-      setTimeout(() => {
-        if (typeof originalFn === "function") {
-          originalFn();
-        }
-      }, 150);
-    }).catch(() => {
-      if (typeof originalFn === "function") originalFn();
-    });
+  if (!finalSn) {
+    finalSn = prompt("Serial Number not detected. Enter Serial #:", "");
+    if (!finalSn) return;
   }
 
-  // Hook into and override OneTrack's native print function
-  if (typeof window.printRepairAuthorization === "function" && !window.printRepairAuthorization.__isHooked) {
-    const originalPrint = window.printRepairAuthorization;
-    window.printRepairAuthorization = function() {
-      executePrintFlow(originalPrint);
-    };
-    window.printRepairAuthorization.__isHooked = true;
+  const snPrefix = /^[A-Za-z]/.test(finalSn) ? "SN " : "SN";
+  const baseTitle = `${clean(finalCompany)} ${clean(finalDevice)} ${snPrefix}${clean(finalSn)} Repair Authorization Report`;
+  const fullPdfName = `${baseTitle}.pdf`;
+
+  // Synchronous clipboard copy
+  function forceCopy(text) {
+    const ta = document.createElement("textarea");
+    ta.value = text;
+    ta.style.position = "fixed";
+    ta.style.top = "0";
+    ta.style.left = "0";
+    ta.style.width = "2em";
+    ta.style.height = "2em";
+    ta.style.padding = "0";
+    ta.style.border = "none";
+    ta.style.outline = "none";
+    ta.style.boxShadow = "none";
+    ta.style.background = "transparent";
+    document.body.appendChild(ta);
+    ta.focus();
+    ta.select();
+    try {
+      document.execCommand("copy");
+    } catch (e) {
+      console.error("Clipboard copy failed", e);
+    }
+    document.body.removeChild(ta);
   }
 
-  // Also replace inline onclick on the button itself to prevent race conditions
-  const pagePrintBtn = document.querySelector('button[onclick*="printRepairAuthorization"]');
-  if (pagePrintBtn) {
-    pagePrintBtn.onclick = function(e) {
-      e.preventDefault();
-      executePrintFlow(() => {
-        if (window.printRepairAuthorization && !window.printRepairAuthorization.__isHooked) {
-          window.printRepairAuthorization();
-        } else {
-          // Trigger form/action if internal function was wrapped
-          window.open(window.location.href, '_blank');
-        }
-      });
-    };
-  }
+  // Set page title for native default suggested save filename
+  document.title = baseTitle;
 
-  // Run immediately when launched from the master toolkit bookmarklet
-  executePrintFlow(() => {
+  // Copy to system clipboard
+  forceCopy(fullPdfName);
+
+  // Status notification
+  const toast = document.createElement("div");
+  toast.style.cssText = "position:fixed;bottom:24px;right:24px;background:#1a1d1f;color:#4ade80;border:1px solid #2d3238;padding:14px 20px;border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,0.6);z-index:9999999;font-family:sans-serif;font-size:13px;";
+  toast.innerHTML = `
+    <div style="font-weight:bold;color:#fff;margin-bottom:4px;">Copied to Clipboard!</div>
+    <div style="color:#cbd2d9;font-family:monospace;font-size:12px;">${fullPdfName}</div>
+  `;
+  document.body.appendChild(toast);
+  setTimeout(() => toast.remove(), 4000);
+
+  // Trigger OneTrack print modal / view
+  setTimeout(() => {
     if (typeof window.printRepairAuthorization === "function") {
       window.printRepairAuthorization();
+    } else {
+      const btn = document.querySelector('button[onclick*="printRepairAuthorization"]');
+      if (btn) btn.click();
     }
-  });
+  }, 150);
 })();
