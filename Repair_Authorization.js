@@ -41,11 +41,6 @@
     return fullText;
   }
 
-  const ownerDOM = getFieldFromDOM("Owner");
-  const modelDOM = getFieldFromDOM("Model");
-  const serialDOM = getFieldFromDOM("Serial Number");
-  const bodyText = collectAllText();
-
   // 1. Company Map (Includes Patient-Owned)
   const companyMap = [
     { pattern: /Patient-?Owned/i, name: "Patient-Owned" },
@@ -98,85 +93,64 @@
     { pattern: /Sapphire/i, name: "Sapphire" }
   ];
 
-  // --- SERIAL NUMBER EXTRACTION ---
-  let sn = serialDOM || "";
-  if (!sn) {
-    const snMatch = bodyText.match(/Serial\s*(?:Number|#)?\s*[:#-]?\s*([A-Za-z0-9]+)/i);
-    if (snMatch && snMatch[1].length >= 4) {
-      sn = snMatch[1].trim();
-    } else {
-      const patternMatch = 
-        bodyText.match(/\b(KS[A-Za-z0-9]{8,12})\b/i) ||
-        bodyText.match(/\b([FS]\d{7,9})\b/i)          ||
-        bodyText.match(/\b(\d{5,9})\b/);
-      sn = patternMatch ? patternMatch[1].trim() : "";
-    }
-  }
+  function generateFilename() {
+    const ownerDOM = getFieldFromDOM("Owner");
+    const modelDOM = getFieldFromDOM("Model");
+    const serialDOM = getFieldFromDOM("Serial Number");
+    const bodyText = collectAllText();
 
-  // --- DEVICE DETECTION ---
-  let detectedDevice = "";
-  if (modelDOM) {
-    for (const d of deviceMap) {
-      if (d.pattern.test(modelDOM)) {
-        detectedDevice = d.name;
-        break;
+    let sn = serialDOM || "";
+    if (!sn) {
+      const snMatch = bodyText.match(/Serial\s*(?:Number|#)?\s*[:#-]?\s*([A-Za-z0-9]+)/i);
+      if (snMatch && snMatch[1].length >= 4) {
+        sn = snMatch[1].trim();
+      } else {
+        const patternMatch = 
+          bodyText.match(/\b(KS[A-Za-z0-9]{8,12})\b/i) ||
+          bodyText.match(/\b([FS]\d{7,9})\b/i)          ||
+          bodyText.match(/\b(\d{5,9})\b/);
+        sn = patternMatch ? patternMatch[1].trim() : "";
       }
     }
-  }
-  if (!detectedDevice) {
-    for (const d of deviceMap) {
-      if (d.pattern.test(bodyText)) {
-        detectedDevice = d.name;
-        break;
+
+    let detectedDevice = "";
+    if (modelDOM) {
+      for (const d of deviceMap) {
+        if (d.pattern.test(modelDOM)) { detectedDevice = d.name; break; }
       }
     }
-  }
-
-  // --- COMPANY DETECTION (Owner DOM checked first) ---
-  let detectedCompany = "";
-  if (ownerDOM) {
-    for (const c of companyMap) {
-      if (c.pattern.test(ownerDOM)) {
-        detectedCompany = c.name;
-        break;
+    if (!detectedDevice) {
+      for (const d of deviceMap) {
+        if (d.pattern.test(bodyText)) { detectedDevice = d.name; break; }
       }
     }
-  }
-  if (!detectedCompany) {
-    for (const c of companyMap) {
-      if (c.pattern.test(bodyText)) {
-        detectedCompany = c.name;
-        break;
+
+    let detectedCompany = "";
+    if (ownerDOM) {
+      for (const c of companyMap) {
+        if (c.pattern.test(ownerDOM)) { detectedCompany = c.name; break; }
       }
     }
+    if (!detectedCompany) {
+      for (const c of companyMap) {
+        if (c.pattern.test(bodyText)) { detectedCompany = c.name; break; }
+      }
+    }
+
+    const clean = str => (str || "").replace(/[\\/:*?"<>|]/g, "").trim();
+    let finalCompany = clean(detectedCompany) || "Patient-Owned";
+    let finalDevice = clean(detectedDevice) || "Joey";
+    let finalSn = clean(sn);
+
+    if (!finalSn) {
+      finalSn = prompt("Serial Number not detected. Enter Serial #:", "");
+      if (!finalSn) return "";
+    }
+
+    const snPrefix = /^[A-Za-z]/.test(finalSn) ? "SN " : "SN";
+    return `${clean(finalCompany)} ${clean(finalDevice)} ${snPrefix}${clean(finalSn)} Repair Authorization Report.pdf`;
   }
 
-  const clean = str => (str || "").replace(/[\\/:*?"<>|]/g, "").trim();
-
-  let finalCompany = clean(detectedCompany);
-  let finalDevice = clean(detectedDevice);
-  let finalSn = clean(sn);
-
-  if (!finalCompany) {
-    finalCompany = prompt("Company not recognized automatically. Enter Company name:", "Patient-Owned");
-    if (!finalCompany) return;
-  }
-
-  if (!finalDevice) {
-    finalDevice = prompt("Device not recognized automatically. Enter Device name:", "Joey");
-    if (!finalDevice) return;
-  }
-
-  if (!finalSn) {
-    finalSn = prompt("Serial Number not detected. Enter Serial #:", "");
-    if (!finalSn) return;
-  }
-
-  // Format SN prefix: space added if starting with an alphabetical character
-  const snPrefix = /^[A-Za-z]/.test(finalSn) ? "SN " : "SN";
-  const fileName = `${clean(finalCompany)} ${clean(finalDevice)} ${snPrefix}${clean(finalSn)} Repair Authorization Report.pdf`;
-
-  // --- CLIPBOARD ACTION & AUTO PRINT ---
   function copyText(text) {
     if (navigator.clipboard && navigator.clipboard.writeText) {
       return navigator.clipboard.writeText(text);
@@ -196,23 +170,47 @@
     });
   }
 
-  copyText(fileName).then(() => {
+  function showNotification(fileName) {
     const toast = document.createElement("div");
     toast.style.cssText = "position:fixed;bottom:24px;right:24px;background:#1a1d1f;color:#4ade80;border:1px solid #2d3238;padding:14px 20px;border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,0.6);z-index:9999999;font-family:sans-serif;font-size:13px;max-width:420px;line-height:1.5;";
     toast.innerHTML = `
       <div style="font-weight:bold;color:#fff;margin-bottom:4px;">Ready to Paste!</div>
       <div style="color:#cbd2d9;font-family:monospace;font-size:12px;word-break:break-all;">${fileName}</div>
-      <div style="color:#9aa0a6;font-size:11px;margin-top:6px;">Copied! Opening print dialog... Press <b>Ctrl + V</b> when saving.</div>
+      <div style="color:#9aa0a6;font-size:11px;margin-top:6px;">Opening Report Printout... Press <b>Ctrl + V</b> when saving the PDF.</div>
     `;
     document.body.appendChild(toast);
     setTimeout(() => toast.remove(), 4000);
+  }
 
-    // Automatically trigger Print dialog after copying to clipboard
-    setTimeout(() => {
-      window.print();
-    }, 250);
-  }).catch(() => {
-    prompt("Copy filename manually (Ctrl+C):", fileName);
-    window.print();
-  });
+  function triggerOneTrackPrint() {
+    if (typeof window.printRepairAuthorization === "function") {
+      window.printRepairAuthorization();
+    } else {
+      const printBtn = document.querySelector('button[onclick*="printRepairAuthorization"]');
+      if (printBtn) {
+        printBtn.click();
+      }
+    }
+  }
+
+  // Hook into the OneTrack page's Print button so clicking it natively on the page also copies the name
+  const pagePrintBtn = document.querySelector('button[onclick*="printRepairAuthorization"]');
+  if (pagePrintBtn && !pagePrintBtn.dataset.listenerAttached) {
+    pagePrintBtn.dataset.listenerAttached = "true";
+    pagePrintBtn.addEventListener("click", () => {
+      const name = generateFilename();
+      if (name) {
+        copyText(name).then(() => showNotification(name));
+      }
+    });
+  }
+
+  // When triggered directly from the Master Toolkit Launcher:
+  const fileName = generateFilename();
+  if (fileName) {
+    copyText(fileName).then(() => {
+      showNotification(fileName);
+      setTimeout(triggerOneTrackPrint, 300);
+    });
+  }
 })();
