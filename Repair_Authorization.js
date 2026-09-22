@@ -46,8 +46,9 @@
   const serialDOM = getFieldFromDOM("Serial Number");
   const bodyText = collectAllText();
 
-  // 1. Company Map
+  // 1. Company Map (Includes Patient-Owned)
   const companyMap = [
+    { pattern: /Patient-?Owned/i, name: "Patient-Owned" },
     { pattern: /McKesson/i, name: "McKesson" },
     { pattern: /New England Life Care|NELC/i, name: "NELC" },
     { pattern: /Adv(?:\.|anced)?\s*Infusion\s*Care/i, name: "Adv. Infusion Care" },
@@ -78,7 +79,7 @@
     { pattern: /William\s*Bros/i, name: "William Bros" }
   ];
 
-  // 2. Device Map ("Kangaroo" omitted from output names)
+  // 2. Device Map
   const deviceMap = [
     { pattern: /Kangaroo\s*Omni|Omni/i, name: "Omni" },
     { pattern: /Kangaroo\s*Joey|Joey/i, name: "Joey" },
@@ -112,7 +113,7 @@
     }
   }
 
-  // --- DEVICE DETECTION (Model DOM field first) ---
+  // --- DEVICE DETECTION ---
   let detectedDevice = "";
   if (modelDOM) {
     for (const d of deviceMap) {
@@ -131,7 +132,7 @@
     }
   }
 
-  // --- COMPANY DETECTION (Owner DOM field first) ---
+  // --- COMPANY DETECTION (Owner DOM checked first) ---
   let detectedCompany = "";
   if (ownerDOM) {
     for (const c of companyMap) {
@@ -157,12 +158,12 @@
   let finalSn = clean(sn);
 
   if (!finalCompany) {
-    finalCompany = prompt("Company not recognized automatically. Enter Company name:", "McKesson");
+    finalCompany = prompt("Company not recognized automatically. Enter Company name:", "Patient-Owned");
     if (!finalCompany) return;
   }
 
   if (!finalDevice) {
-    finalDevice = prompt("Device not recognized automatically. Enter Device name:", "Omni");
+    finalDevice = prompt("Device not recognized automatically. Enter Device name:", "Joey");
     if (!finalDevice) return;
   }
 
@@ -171,11 +172,11 @@
     if (!finalSn) return;
   }
 
-  // Format SN prefix: "SN " if starting with an alphabetical character, otherwise "SN"
+  // Format SN prefix: space added if starting with an alphabetical character
   const snPrefix = /^[A-Za-z]/.test(finalSn) ? "SN " : "SN";
   const fileName = `${clean(finalCompany)} ${clean(finalDevice)} ${snPrefix}${clean(finalSn)} Repair Authorization Report.pdf`;
 
-  // --- CLIPBOARD ACTION ---
+  // --- CLIPBOARD ACTION & AUTO PRINT ---
   function copyText(text) {
     if (navigator.clipboard && navigator.clipboard.writeText) {
       return navigator.clipboard.writeText(text);
@@ -201,11 +202,17 @@
     toast.innerHTML = `
       <div style="font-weight:bold;color:#fff;margin-bottom:4px;">Ready to Paste!</div>
       <div style="color:#cbd2d9;font-family:monospace;font-size:12px;word-break:break-all;">${fileName}</div>
-      <div style="color:#9aa0a6;font-size:11px;margin-top:6px;">Press <b>Ctrl + V</b> in the Save dialog.</div>
+      <div style="color:#9aa0a6;font-size:11px;margin-top:6px;">Copied! Opening print dialog... Press <b>Ctrl + V</b> when saving.</div>
     `;
     document.body.appendChild(toast);
-    setTimeout(() => toast.remove(), 3500);
+    setTimeout(() => toast.remove(), 4000);
+
+    // Automatically trigger Print dialog after copying to clipboard
+    setTimeout(() => {
+      window.print();
+    }, 250);
   }).catch(() => {
     prompt("Copy filename manually (Ctrl+C):", fileName);
+    window.print();
   });
 })();
