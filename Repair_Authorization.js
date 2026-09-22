@@ -41,7 +41,7 @@
     return fullText;
   }
 
-  // 1. Company Map (Includes Patient-Owned)
+  // 1. Company Map
   const companyMap = [
     { pattern: /Patient-?Owned/i, name: "Patient-Owned" },
     { pattern: /McKesson/i, name: "McKesson" },
@@ -182,35 +182,51 @@
     setTimeout(() => toast.remove(), 4000);
   }
 
-  function triggerOneTrackPrint() {
-    if (typeof window.printRepairAuthorization === "function") {
-      window.printRepairAuthorization();
-    } else {
-      const printBtn = document.querySelector('button[onclick*="printRepairAuthorization"]');
-      if (printBtn) {
-        printBtn.click();
-      }
-    }
-  }
+  function executePrintFlow(originalFn) {
+    const fileName = generateFilename();
+    if (!fileName) return;
 
-  // Hook into the OneTrack page's Print button so clicking it natively on the page also copies the name
-  const pagePrintBtn = document.querySelector('button[onclick*="printRepairAuthorization"]');
-  if (pagePrintBtn && !pagePrintBtn.dataset.listenerAttached) {
-    pagePrintBtn.dataset.listenerAttached = "true";
-    pagePrintBtn.addEventListener("click", () => {
-      const name = generateFilename();
-      if (name) {
-        copyText(name).then(() => showNotification(name));
-      }
-    });
-  }
-
-  // When triggered directly from the Master Toolkit Launcher:
-  const fileName = generateFilename();
-  if (fileName) {
     copyText(fileName).then(() => {
       showNotification(fileName);
-      setTimeout(triggerOneTrackPrint, 300);
+      setTimeout(() => {
+        if (typeof originalFn === "function") {
+          originalFn();
+        }
+      }, 150);
+    }).catch(() => {
+      if (typeof originalFn === "function") originalFn();
     });
   }
+
+  // Hook into and override OneTrack's native print function
+  if (typeof window.printRepairAuthorization === "function" && !window.printRepairAuthorization.__isHooked) {
+    const originalPrint = window.printRepairAuthorization;
+    window.printRepairAuthorization = function() {
+      executePrintFlow(originalPrint);
+    };
+    window.printRepairAuthorization.__isHooked = true;
+  }
+
+  // Also replace inline onclick on the button itself to prevent race conditions
+  const pagePrintBtn = document.querySelector('button[onclick*="printRepairAuthorization"]');
+  if (pagePrintBtn) {
+    pagePrintBtn.onclick = function(e) {
+      e.preventDefault();
+      executePrintFlow(() => {
+        if (window.printRepairAuthorization && !window.printRepairAuthorization.__isHooked) {
+          window.printRepairAuthorization();
+        } else {
+          // Trigger form/action if internal function was wrapped
+          window.open(window.location.href, '_blank');
+        }
+      });
+    };
+  }
+
+  // Run immediately when launched from the master toolkit bookmarklet
+  executePrintFlow(() => {
+    if (typeof window.printRepairAuthorization === "function") {
+      window.printRepairAuthorization();
+    }
+  });
 })();
