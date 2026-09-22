@@ -61,6 +61,7 @@
     { name: "NLT - HEADER, IDC, 5 POS", pn: "40-6288-24A" },
     { name: "OVERLAY, MEMBRANE SWITCH, CE ENGLISH", pn: "31-0993" },
     { name: "PAD, GND, L/L SENSOR", pn: "70-0171" },
+    { name: "PCBA, CADD-SOLIS, FUSED" },
     { name: "PCBA, CADD-SOLIS, TRULY/HIMAX LCD, FLASH MEMORY UPGRADE", pn: "30-4712" },
     { name: "PIN, CASSETTE DETECTOR", pn: "10015258-001" },
     { name: "PLATE, AY, GROUNDING", pn: "30-3163" },
