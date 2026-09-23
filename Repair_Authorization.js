@@ -24,6 +24,7 @@
   }
 
   const companyMap = [
+    { pattern: /Walgreens\s*Specialty|Walgreens/i, name: "Walgreens Specialty" },
     { pattern: /Patient-?Owned/i, name: "Patient-Owned" },
     { pattern: /McKesson/i, name: "McKesson" },
     { pattern: /New England Life Care|NELC/i, name: "NELC" },
@@ -120,7 +121,7 @@
   }
 
   const clean = str => (str || "").replace(/[\\/:*?"<>|]/g, "").trim();
-  let finalCompany = clean(detectedCompany) || "Patient-Owned";
+  let finalCompany = clean(detectedCompany) || "Walgreens Specialty";
   let finalDevice = clean(detectedDevice) || "Joey";
   let finalSn = clean(sn);
 
