@@ -1,30 +1,42 @@
 (function(){
-  // Helper: Pull text strictly next to a specific label in OneTrack
+  // Targeted label-value scraper for OneTrack's grid / table layout
   function getFieldFromDOM(labelText) {
-    const labels = Array.from(document.querySelectorAll('td, th, label, span, div, p'));
-    const target = labels.find(el => el.children.length === 0 && el.textContent.trim().toLowerCase() === labelText.toLowerCase());
+    const allElements = Array.from(document.querySelectorAll('td, th, label, div, span'));
+    const target = allElements.find(el => {
+      const directText = Array.from(el.childNodes)
+        .filter(n => n.nodeType === Node.TEXT_NODE)
+        .map(n => n.textContent.trim())
+        .join(' ');
+      return (directText || el.textContent.trim()).toLowerCase() === labelText.toLowerCase();
+    });
+
     if (target) {
-      if (target.nextElementSibling) return target.nextElementSibling.textContent.trim();
+      // 1. Next sibling element
+      if (target.nextElementSibling) {
+        const val = target.nextElementSibling.innerText || target.nextElementSibling.textContent;
+        if (val && val.trim()) return val.trim();
+      }
+      // 2. Parent's sibling (table cell / bootstrap col pairing)
       const parent = target.parentElement;
-      if (parent && parent.children.length > 1) {
-        const idx = Array.from(parent.children).indexOf(target);
-        if (idx !== -1 && parent.children[idx + 1]) return parent.children[idx + 1].textContent.trim();
+      if (parent) {
+        if (parent.nextElementSibling) {
+          const val = parent.nextElementSibling.innerText || parent.nextElementSibling.textContent;
+          if (val && val.trim()) return val.trim();
+        }
+        const siblings = Array.from(parent.children);
+        const idx = siblings.indexOf(target);
+        if (idx !== -1 && siblings[idx + 1]) {
+          const val = siblings[idx + 1].innerText || siblings[idx + 1].textContent;
+          if (val && val.trim()) return val.trim();
+        }
       }
     }
     return "";
   }
 
-  // Fallback: Collect all page text
-  function collectAllText() {
-    let fullText = document.body ? (document.body.innerText || "") : "";
-    document.querySelectorAll("input, select, textarea").forEach(el => {
-      if (el.value) fullText += " " + el.value;
-    });
-    return fullText;
-  }
-
+  // Company Map
   const companyMap = [
-    { pattern: /Walgreens\s*Specialty|Walgreens/i, name: "Walgreens Specialty" },
+    { pattern: /Walgreens/i, name: "Walgreens Specialty" },
     { pattern: /Patient-?Owned/i, name: "Patient-Owned" },
     { pattern: /McKesson/i, name: "McKesson" },
     { pattern: /New England Life Care|NELC/i, name: "NELC" },
@@ -56,11 +68,15 @@
     { pattern: /William\s*Bros/i, name: "William Bros" }
   ];
 
+  // Device Map
   const deviceMap = [
+    { pattern: /Curlin\s*6000(?:\s*CMS)?|6000\s*CMS/i, name: "Curlin 6000 CMS" },
+    { pattern: /Curlin\s*4000(?:\s*CMS)?|4000\s*CMS/i, name: "Curlin 4000 CMS" },
+    { pattern: /Curlin\s*PainSmart/i, name: "Curlin PainSmart" },
+    { pattern: /Curlin/i, name: "Curlin" },
     { pattern: /Kangaroo\s*Omni|Omni/i, name: "Omni" },
     { pattern: /Kangaroo\s*Joey|Joey/i, name: "Joey" },
     { pattern: /Infinity|EnteraLite/i, name: "Infinity" },
-    { pattern: /Curlin/i, name: "Curlin" },
     { pattern: /Solis/i, name: "Solis" },
     { pattern: /Freedom\s*Edge/i, name: "Freedom Edge" },
     { pattern: /Freedom\s*60|Freedom/i, name: "Freedom 60" },
@@ -77,7 +93,14 @@
   const ownerDOM = getFieldFromDOM("Owner");
   const modelDOM = getFieldFromDOM("Model");
   const serialDOM = getFieldFromDOM("Serial Number");
-  const bodyText = collectAllText();
+
+  // Fallback body scan that strictly avoids scanning the Repair House select dropdown
+  function collectSafeBodyText() {
+    let clone = document.body.cloneNode(true);
+    clone.querySelectorAll('select, #repairHouse, [name*="repairHouse"], [id*="repairHouse"]').forEach(el => el.remove());
+    return clone.innerText || "";
+  }
+  const bodyText = collectSafeBodyText();
 
   // Serial Number Extraction
   let sn = serialDOM || "";
@@ -107,7 +130,7 @@
     }
   }
 
-  // Company Detection
+  // Company Detection - Strictly prioritize Owner DOM
   let detectedCompany = "";
   if (ownerDOM) {
     for (const c of companyMap) {
@@ -122,7 +145,7 @@
 
   const clean = str => (str || "").replace(/[\\/:*?"<>|]/g, "").trim();
   let finalCompany = clean(detectedCompany) || "Walgreens Specialty";
-  let finalDevice = clean(detectedDevice) || "Joey";
+  let finalDevice = clean(detectedDevice) || "Curlin";
   let finalSn = clean(sn);
 
   if (!finalSn) {
@@ -134,7 +157,7 @@
   const baseTitle = `${clean(finalCompany)} ${clean(finalDevice)} ${snPrefix}${clean(finalSn)} Repair Authorization Report`;
   const fullPdfName = `${baseTitle}.pdf`;
 
-  // Synchronous clipboard copy
+  // Synchronous clipboard write
   function forceCopy(text) {
     const ta = document.createElement("textarea");
     ta.value = text;
@@ -159,13 +182,13 @@
     document.body.removeChild(ta);
   }
 
-  // Set page title for native default suggested save filename
+  // Set page title for print dialog default
   document.title = baseTitle;
 
-  // Copy to system clipboard
+  // Copy to clipboard
   forceCopy(fullPdfName);
 
-  // Status notification
+  // Show Toast
   const toast = document.createElement("div");
   toast.style.cssText = "position:fixed;bottom:24px;right:24px;background:#1a1d1f;color:#4ade80;border:1px solid #2d3238;padding:14px 20px;border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,0.6);z-index:9999999;font-family:sans-serif;font-size:13px;";
   toast.innerHTML = `
@@ -175,7 +198,7 @@
   document.body.appendChild(toast);
   setTimeout(() => toast.remove(), 4000);
 
-  // Trigger OneTrack print modal / view
+  // Trigger Print View
   setTimeout(() => {
     if (typeof window.printRepairAuthorization === "function") {
       window.printRepairAuthorization();
