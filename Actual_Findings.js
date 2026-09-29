@@ -51,29 +51,28 @@
     localStorage.setItem('af_custom_presets', JSON.stringify(list));
   }
 
+  // Exact Target DOM Injection
   function applyTextToDOM(text) {
-    const textareas = Array.from(document.querySelectorAll('textarea, input[type="text"]'));
-    let targetEl = textareas.find(el => {
-      const nameOrId = (el.name || el.id || "").toLowerCase();
-      return nameOrId.includes("actualfinding") || nameOrId.includes("actual_finding") || nameOrId.includes("findings");
-    });
+    // Direct ID target from DevTools inspection
+    let targetEl = document.getElementById('findingsTextArea') || 
+                   document.querySelector('textarea[name="Finding"]') || 
+                   document.querySelector('#actualFindingsAddForm textarea');
 
+    // Fallback: search activeElement or all textareas
     if (!targetEl) {
-      const labels = Array.from(document.querySelectorAll('label, td, th, span, div'));
-      const afLabel = labels.find(el => el.children.length === 0 && el.textContent.trim().toLowerCase().includes("actual findings"));
-      if (afLabel) {
-        if (afLabel.nextElementSibling && afLabel.nextElementSibling.querySelector('textarea')) {
-          targetEl = afLabel.nextElementSibling.querySelector('textarea');
-        } else if (afLabel.parentElement) {
-          targetEl = afLabel.parentElement.querySelector('textarea');
-        }
+      if (document.activeElement && (document.activeElement.tagName === 'TEXTAREA' || document.activeElement.tagName === 'INPUT')) {
+        targetEl = document.activeElement;
+      } else {
+        targetEl = document.querySelector('textarea');
       }
     }
 
     if (targetEl) {
       targetEl.value = text;
+      // Trigger input & change events so web app/framework recognizes the entry
       targetEl.dispatchEvent(new Event('input', { bubbles: true }));
       targetEl.dispatchEvent(new Event('change', { bubbles: true }));
+      targetEl.focus();
     } else if (navigator.clipboard) {
       navigator.clipboard.writeText(text);
       alert("Copied to clipboard: " + text);
