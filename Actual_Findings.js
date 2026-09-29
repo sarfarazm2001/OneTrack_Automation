@@ -1,22 +1,15 @@
 (function(){
-  // Default contact list
-  const defaultContacts = [
-    { name: "Shana Brown", company: "CORAM" },
-    { name: "Amy Kwong", company: "CORAM" },
-    { name: "Brian Fitzpatrick", company: "OPTION CARE" },
-    { name: "Carl Kerekes", company: "Walgreens" },
-    { name: "William Maturo", company: "CVS" },
-    { name: "Janey Mechler", company: "OPTUM" },
-    { name: "Heather LeClair", company: "OPTUM" },
-    { name: "David Rolph", company: "AmeriMed" },
-    { name: "Alexsis Gauthier", company: "NELC" },
-    { name: "Sheryl Guyer", company: "NELC" },
-    { name: "Lauren Lynch", company: "NELC" },
-    { name: "Michael O'Connor", company: "NELC" },
-    { name: "Joshua Kronick", company: "NELC" }
-  ];
+  // Company-to-Rep Mapping
+  const companyContacts = {
+    "AmeriMed": ["Shana Brown"],
+    "CORAM": ["Amy Kwong", "Brian Fitzpatrick"],
+    "CVS": ["Carl Kerekes"],
+    "NELC": ["William Maturo", "Janey Mechler"],
+    "OPTION CARE": ["Heather LeClair", "David Rolph"],
+    "OPTUM": ["Alexsis Gauthier", "Sheryl Guyer"],
+    "Walgreens": ["Lauren Lynch", "Michael O'Connor", "Joshua Kronick"]
+  };
 
-  // Base Presets List
   const defaultPresets = [
     "TE: 8TR, 77TR, 148TR, 134TR, 6J",
     "Outdated battery and it needs to be changed. (JOEY)",
@@ -40,37 +33,26 @@
     return `${mm}/${dd}/${yyyy}`;
   }
 
-  // LocalStorage Helpers for Custom Contacts & Presets
   function getCustomContacts() {
-    try {
-      return JSON.parse(localStorage.getItem('af_custom_contacts') || '[]');
-    } catch(e) { return []; }
+    try { return JSON.parse(localStorage.getItem('af_custom_contacts') || '[]'); } catch(e) { return []; }
   }
 
-  function saveCustomContact(name, company) {
+  function saveCustomContact(name) {
     const customs = getCustomContacts();
-    customs.push({ name, company });
+    customs.push(name);
     localStorage.setItem('af_custom_contacts', JSON.stringify(customs));
   }
 
-  function getAllContacts() {
-    return [...defaultContacts, ...getCustomContacts()];
-  }
-
   function getCustomPresets() {
-    try {
-      return JSON.parse(localStorage.getItem('af_custom_presets') || '[]');
-    } catch(e) { return []; }
+    try { return JSON.parse(localStorage.getItem('af_custom_presets') || '[]'); } catch(e) { return []; }
   }
 
   function saveCustomPresets(list) {
     localStorage.setItem('af_custom_presets', JSON.stringify(list));
   }
 
-  // Target Finder for Actual Findings field ONLY
   function applyTextToDOM(text) {
     const textareas = Array.from(document.querySelectorAll('textarea, input[type="text"]'));
-    
     let targetEl = textareas.find(el => {
       const nameOrId = (el.name || el.id || "").toLowerCase();
       return nameOrId.includes("actualfinding") || nameOrId.includes("actual_finding") || nameOrId.includes("findings");
@@ -88,13 +70,6 @@
       }
     }
 
-    if (!targetEl) {
-      targetEl = textareas.find(el => {
-        const nameOrId = (el.name || el.id || "").toLowerCase();
-        return !nameOrId.includes("customerinstruction") && !nameOrId.includes("instruction");
-      });
-    }
-
     if (targetEl) {
       targetEl.value = text;
       targetEl.dispatchEvent(new Event('input', { bubbles: true }));
@@ -105,7 +80,6 @@
     }
   }
 
-  // Remove existing modal if present
   const existing = document.getElementById('af-preset-modal');
   if (existing) existing.remove();
 
@@ -114,7 +88,7 @@
   modal.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.7);z-index:9999999;display:flex;align-items:center;justify-content:center;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;';
 
   const box = document.createElement('div');
-  box.style.cssText = 'background:#1e2329;padding:20px;border-radius:10px;box-shadow:0 8px 32px rgba(0,0,0,0.5);width:450px;max-height:85vh;display:flex;flex-direction:column;color:#f1f3f5;border:1px solid #2d333b;';
+  box.style.cssText = 'background:#1e2329;padding:20px;border-radius:10px;box-shadow:0 8px 32px rgba(0,0,0,0.5);width:430px;max-height:85vh;display:flex;flex-direction:column;color:#f1f3f5;border:1px solid #2d333b;';
 
   box.innerHTML = `
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
@@ -133,18 +107,13 @@
         <option value="storage">To be placed in storage until further notice by</option>
       </select>
       
-      <div style="display:grid;grid-template-columns:1fr 1.2fr auto;gap:6px;margin-bottom:8px;">
-        <!-- Reference Company Filter -->
-        <select id="af_company_filter" style="padding:7px;background:#1e2329;color:#8b949e;border:1px solid #444;border-radius:4px;font-size:12px;">
-          <option value="">Filter Company...</option>
+      <div style="display:flex;gap:6px;margin-bottom:8px;">
+        <!-- Single Authorized Rep Dropdown with Grouped Company Headers -->
+        <select id="af_person_select" style="flex:1;padding:7px;background:#1e2329;color:#fff;border:1px solid #444;border-radius:4px;font-size:12px;">
+          <option value="">Authorized Person...</option>
         </select>
 
-        <!-- Authorized Rep Input -->
-        <input type="text" id="af_person_input" list="af_contacts_list" placeholder="Authorized Person..." style="padding:7px;background:#1e2329;color:#fff;border:1px solid #444;border-radius:4px;font-size:12px;">
-        <datalist id="af_contacts_list"></datalist>
-
-        <!-- Add Contact Button -->
-        <button id="af_add_rep_btn" title="Add new rep & company" style="padding:7px 10px;background:#238636;color:#fff;border:none;border-radius:4px;cursor:pointer;font-weight:600;font-size:12px;">➕ Rep</button>
+        <button id="af_add_rep_btn" title="Add new rep name" style="padding:7px 12px;background:#238636;color:#fff;border:none;border-radius:4px;cursor:pointer;font-weight:600;font-size:12px;white-space:nowrap;">➕ Rep</button>
       </div>
 
       <button id="af_build_btn" style="width:100%;padding:8px;background:#1f6feb;color:#fff;border:none;border-radius:4px;cursor:pointer;font-weight:600;font-size:12px;">Insert Authorization Note</button>
@@ -169,53 +138,57 @@
   modal.appendChild(box);
   document.body.appendChild(modal);
 
-  const companyFilter = document.getElementById('af_company_filter');
-  const contactsList = document.getElementById('af_contacts_list');
+  const personSelect = document.getElementById('af_person_select');
 
-  // Populates Companies and Rep Datalist
-  function refreshContactUI() {
-    const allContacts = getAllContacts();
-    const companies = Array.from(new Set(allContacts.map(c => c.company))).sort();
+  // Populate Dropdown using OPTGROUP (Company Name Headers)
+  function renderGroupedContacts() {
+    personSelect.innerHTML = '<option value="">Authorized Person...</option>';
 
-    const currentSelectedCompany = companyFilter.value;
-    companyFilter.innerHTML = `<option value="">Filter Company...</option>` + 
-      companies.map(comp => `<option value="${comp}" ${comp === currentSelectedCompany ? 'selected' : ''}>${comp}</option>`).join('');
+    // Render preset companies and their reps
+    Object.keys(companyContacts).sort().forEach(company => {
+      const group = document.createElement('optgroup');
+      group.label = company; // Non-selectable header label
 
-    contactsList.innerHTML = "";
-    const filtered = currentSelectedCompany 
-      ? allContacts.filter(c => c.company === currentSelectedCompany) 
-      : allContacts;
+      companyContacts[company].sort().forEach(name => {
+        const opt = document.createElement('option');
+        opt.value = name;
+        opt.textContent = name;
+        group.appendChild(opt);
+      });
 
-    filtered.forEach(c => {
-      const opt = document.createElement('option');
-      opt.value = c.name;
-      opt.label = `${c.name} (${c.company})`;
-      contactsList.appendChild(opt);
+      personSelect.appendChild(group);
     });
+
+    // Render custom added contacts
+    const customs = getCustomContacts();
+    if (customs.length > 0) {
+      const customGroup = document.createElement('optgroup');
+      customGroup.label = "CUSTOM CONTACTS";
+
+      customs.sort().forEach(name => {
+        const opt = document.createElement('option');
+        opt.value = name;
+        opt.textContent = name;
+        customGroup.appendChild(opt);
+      });
+
+      personSelect.appendChild(customGroup);
+    }
   }
 
-  refreshContactUI();
+  renderGroupedContacts();
 
-  companyFilter.addEventListener('change', () => {
-    refreshContactUI();
-    document.getElementById('af_person_input').value = "";
-  });
-
-  // Add New Rep & Company Dynamic Flow
+  // Add custom rep
   document.getElementById('af_add_rep_btn').onclick = () => {
     const repName = prompt("Enter Authorized Person Name (e.g., John Smith):");
     if (!repName || !repName.trim()) return;
 
-    const companyName = prompt("Enter Company/Client Name (e.g., CORAM):");
-    if (!companyName || !companyName.trim()) return;
-
-    saveCustomContact(repName.trim(), companyName.trim().toUpperCase());
-    refreshContactUI();
-    document.getElementById('af_person_input').value = repName.trim();
-    alert(`Added ${repName.trim()} (${companyName.trim().toUpperCase()}) to contacts list!`);
+    saveCustomContact(repName.trim());
+    renderGroupedContacts();
+    personSelect.value = repName.trim();
   };
 
-  // Render Presets
+  // Render Presets List
   const listContainer = document.getElementById('af_presets_list');
   function renderPresets(filter = "") {
     listContainer.innerHTML = "";
@@ -227,7 +200,6 @@
       if (filter && !formattedText.toLowerCase().includes(filter.toLowerCase())) return;
 
       const btn = document.createElement('button');
-      btn.className = 'af_preset_btn';
       btn.style.cssText = 'text-align:left;padding:9px;background:#232830;color:#e6edf3;border:1px solid #30363d;border-radius:5px;cursor:pointer;font-size:12px;line-height:1.4;';
       btn.textContent = formattedText;
       btn.onclick = () => {
@@ -239,12 +211,10 @@
   }
   renderPresets();
 
-  // Search Filter
   document.getElementById('af_search').addEventListener('input', (e) => {
     renderPresets(e.target.value);
   });
 
-  // Add Custom Preset Note
   document.getElementById('af_add_btn').onclick = () => {
     const newNote = prompt("Enter new preset note:");
     if (newNote && newNote.trim()) {
@@ -255,10 +225,9 @@
     }
   };
 
-  // Dynamic Builder Action
   document.getElementById('af_build_btn').onclick = () => {
     const action = document.getElementById('af_action_select').value;
-    const person = document.getElementById('af_person_input').value.trim();
+    const person = personSelect.value.trim();
 
     if (!person) {
       alert("Please select or enter the name of the authorized person.");
@@ -266,21 +235,15 @@
     }
 
     let resultNote = "";
-    if (action === "dispose") {
-      resultNote = `Repairs declined and asked to be disposed of by ${person}.`;
-    } else if (action === "return") {
-      resultNote = `Repairs declined and asked to be returned by ${person}.`;
-    } else if (action === "approve") {
-      resultNote = `Repairs approved by ${person}.`;
-    } else if (action === "storage") {
-      resultNote = `To be placed in the storage until further notice by ${person}.`;
-    }
+    if (action === "dispose") resultNote = `Repairs declined and asked to be disposed of by ${person}.`;
+    else if (action === "return") resultNote = `Repairs declined and asked to be returned by ${person}.`;
+    else if (action === "approve") resultNote = `Repairs approved by ${person}.`;
+    else if (action === "storage") resultNote = `To be placed in the storage until further notice by ${person}.`;
 
     applyTextToDOM(resultNote);
     modal.remove();
   };
 
-  // Close & Back Events
   const close = () => modal.remove();
   document.getElementById('af_close_x').onclick = close;
   document.getElementById('af_cancel_btn').onclick = close;
