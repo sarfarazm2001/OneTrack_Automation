@@ -1,22 +1,44 @@
 (function(){
-  const DEFAULT_PHRASES=[
+  // Auto-detect company from DOM
+  function detectCompanyFromDOM() {
+    const labels = Array.from(document.querySelectorAll('td, th, label, span, div, p'));
+    const target = labels.find(el => el.children.length === 0 && el.textContent.trim().toLowerCase() === "owner");
+    let val = "";
+    if (target) {
+      if (target.nextElementSibling) val = target.nextElementSibling.textContent.trim();
+      else if (target.parentElement && target.parentElement.children.length > 1) {
+        const idx = Array.from(target.parentElement.children).indexOf(target);
+        if (idx !== -1 && target.parentElement.children[idx + 1]) {
+          val = target.parentElement.children[idx + 1].textContent.trim();
+        }
+      }
+    }
+    if (!val) {
+      const match = document.body.innerText.match(/Owner\s*[:#-]?\s*([A-Za-z0-9\s.-]+)/i);
+      if (match) val = match[1].trim();
+    }
+    return val ? val.split('-')[0].trim() : "";
+  }
+
+  // Get Today's Date formatted MM/DD/YYYY
+  function getTodayFormatted() {
+    const d = new Date();
+    const mm = String(d.getMonth() + 1).padStart(2, '0');
+    const dd = String(d.getDate()).padStart(2, '0');
+    const yyyy = d.getFullYear();
+    return `${mm}/${dd}/${yyyy}`;
+  }
+
+  const detectedCompany = detectCompanyFromDOM();
+
+  // General Presets List
+  const presets = [
+    "TE: 8TR, 77TR, 148TR, 134TR, 6J",
     "Outdated battery and it needs to be changed. (JOEY)",
     "Battery replaced on {DATE}. (JOEY)",
     "This device is under warranty.",
+    "Pressure strains calibrated. (CURLIN)",
     "No issue found. PM was successful.",
-    "Repairs declined and asked to be disposed of by Shana Brown. (CORAM)",
-    "Repairs declined and asked to be disposed of by Amy Kwong. (CORAM)",
-    "Repairs declined and asked to be disposed of by William Maturo. (CVS)",
-    "Repairs declined and asked to be disposed of by Janey Mechler. (OPTUM)",
-    "Repairs declined and asked to be disposed of by Heather LeClair. (OPTUM)",
-    "Repairs declined and asked to be returned by William Maturo. (CVS)",
-    "Repairs declined and asked to be returned by David Rolph. (AmeriMed)",
-    "Repairs declined and asked to be returned by Alexsis Gauthier. (NELC)",
-    "Repairs declined and asked to be returned by Sheryl Guyer. (NELC)",
-    "Repairs declined and asked to be returned by Lauren Lynch. (NELC)",
-    "Repairs declined and asked to be returned by Michael OConnor. (NELC)",
-    "Repairs approved by Lauren Lynch. (NELC)",
-    "To be placed in the storage until further notice by Brian Fitzpatrick. (OPTION CARE)",
     "No response from client. Returning unrepaired.",
     "Software needs to be updated to 97-0625-010600-01. (SOLIS)",
     "Software updated to 97-0625-010600-01 at McKesson. (SOLIS)",
@@ -25,121 +47,136 @@
     "Completed 10 day charge cycle per OEM recommendation. Passed all functional tests without error and passed PM per manufacturer specifications."
   ];
 
-  function getPhrases(){
-    let saved=localStorage.getItem('my_preset_notes');
-    if(saved){
-      try{return JSON.parse(saved);}catch(e){}
+  // Helper to insert into OneTrack field
+  function applyTextToDOM(text) {
+    const targetEl = document.querySelector('textarea[name*="actualFindings"], textarea[id*="actualFindings"], textarea, input[name*="actualFindings"]');
+    if (targetEl) {
+      targetEl.value = text;
+      targetEl.dispatchEvent(new Event('input', { bubbles: true }));
+      targetEl.dispatchEvent(new Event('change', { bubbles: true }));
+    } else if (navigator.clipboard) {
+      navigator.clipboard.writeText(text);
+      alert("Copied to clipboard: " + text);
     }
-    return DEFAULT_PHRASES;
   }
 
-  function showMainModal(){
-    let phrases=getPhrases();
-    let overlay=document.createElement('div');
-    overlay.style.cssText='position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:999999;display:flex;align-items:center;justify-content:center;font-family:sans-serif;';
-    let box=document.createElement('div');
-    box.style.cssText='background:#fff;padding:20px;border-radius:8px;box-shadow:0 4px 10px rgba(0,0,0,0.3);width:450px;max-height:80vh;display:flex;flex-direction:column;color:#333;';
-    
-    let heading=document.createElement('h3');
-    heading.innerText='Select Preset Note';
-    heading.style.cssText='margin-top:0;margin-bottom:12px;font-size:16px;color:#222;text-align:center;';
-    box.appendChild(heading);
+  // Remove existing modal if present
+  const existing = document.getElementById('af-preset-modal');
+  if (existing) existing.remove();
 
-    let container=document.createElement('div');
-    container.style.cssText='overflow-y:auto;flex:1;padding-right:5px;margin-bottom:12px;';
-    
-    let todayStr=new Date().toLocaleDateString('en-US',{month:'2-digit',day:'2-digit',year:'numeric'});
-    phrases.forEach(text=>{
-      let displayText=text.replace('{DATE}',todayStr);
-      let cleanText=displayText.replace(/\s*\([^)]*\)\s*$/,'').trim();
-      let btn=document.createElement('button');
-      btn.innerText=displayText;
-      btn.style.cssText='display:block;width:100%;padding:8px 10px;margin:4px 0;background:#f8f9fa;color:#212529;border:1px solid #ced4da;border-radius:4px;cursor:pointer;font-size:12px;text-align:left;line-height:1.4;';
-      btn.onmouseover=()=>btn.style.background='#e2e6ea';
-      btn.onmouseout=()=>btn.style.background='#f8f9fa';
-      btn.onclick=()=>{
-        document.body.removeChild(overlay);
-        processTextSelection(cleanText);
+  // Build UI Container
+  const modal = document.createElement('div');
+  modal.id = 'af-preset-modal';
+  modal.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.7);z-index:9999999;display:flex;align-items:center;justify-content:center;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;';
+
+  const box = document.createElement('div');
+  box.style.cssText = 'background:#1e2329;padding:20px;border-radius:10px;box-shadow:0 8px 32px rgba(0,0,0,0.5);width:420px;max-height:85vh;display:flex;flex-direction:column;color:#f1f3f5;border:1px solid #2d333b;';
+
+  box.innerHTML = `
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+      <h3 style="margin:0;font-size:16px;font-weight:700;color:#fff;">Actual Findings Presets</h3>
+      <span id="af_close_x" style="cursor:pointer;font-size:20px;color:#8b949e;line-height:1;">&times;</span>
+    </div>
+
+    <!-- Dynamic Builder Section -->
+    <div style="background:#262c36;padding:12px;border-radius:6px;border:1px solid #363d4a;margin-bottom:12px;">
+      <div style="font-size:11px;font-weight:700;color:#58a6ff;text-transform:uppercase;margin-bottom:8px;">⚡ Dynamic Authorization Builder</div>
+      <div style="display:grid;grid-template-columns:1fr;gap:8px;margin-bottom:8px;">
+        <select id="af_action_select" style="width:100%;padding:7px;background:#1e2329;color:#fff;border:1px solid #444;border-radius:4px;font-size:12px;">
+          <option value="dispose">Repairs declined & asked to be disposed of by</option>
+          <option value="return">Repairs declined & asked to be returned by</option>
+          <option value="approve">Repairs approved by</option>
+          <option value="storage">To be placed in storage until further notice by</option>
+        </select>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;">
+          <input type="text" id="af_person_input" placeholder="Authorized Person (e.g. Shana Brown)" style="padding:7px;background:#1e2329;color:#fff;border:1px solid #444;border-radius:4px;font-size:12px;">
+          <input type="text" id="af_company_input" value="${detectedCompany}" placeholder="Company (e.g. CORAM)" style="padding:7px;background:#1e2329;color:#fff;border:1px solid #444;border-radius:4px;font-size:12px;">
+        </div>
+      </div>
+      <button id="af_build_btn" style="width:100%;padding:8px;background:#1f6feb;color:#fff;border:none;border-radius:4px;cursor:pointer;font-weight:600;font-size:12px;">Insert Built Authorization Note</button>
+    </div>
+
+    <!-- Search Bar -->
+    <input type="text" id="af_search" placeholder="🔍 Search presets..." style="width:100%;padding:8px;background:#1e2329;color:#fff;border:1px solid #363d4a;border-radius:4px;font-size:12px;margin-bottom:10px;box-sizing:border-box;">
+
+    <!-- Presets List -->
+    <div id="af_presets_list" style="overflow-y:auto;flex:1;display:flex;flex-direction:column;gap:6px;padding-right:4px;"></div>
+
+    <!-- Footer Controls -->
+    <div style="display:flex;gap:8px;margin-top:12px;">
+      <button id="af_back_btn" style="flex:1;padding:8px;background:#363d4a;color:#fff;border:none;border-radius:4px;cursor:pointer;font-weight:600;font-size:12px;">← Back</button>
+      <button id="af_cancel_btn" style="flex:1;padding:8px;background:#da3633;color:#fff;border:none;border-radius:4px;cursor:pointer;font-weight:600;font-size:12px;">Cancel</button>
+    </div>
+  `;
+
+  modal.appendChild(box);
+  document.body.appendChild(modal);
+
+  // Render Preset Buttons
+  const listContainer = document.getElementById('af_presets_list');
+  function renderPresets(filter = "") {
+    listContainer.innerHTML = "";
+    const today = getTodayFormatted();
+    presets.forEach(pText => {
+      const formattedText = pText.replace('{DATE}', today);
+      if (filter && !formattedText.toLowerCase().includes(filter.toLowerCase())) return;
+
+      const btn = document.createElement('button');
+      btn.className = 'af_preset_btn';
+      btn.style.cssText = 'text-align:left;padding:9px;background:#232830;color:#e6edf3;border:1px solid #30363d;border-radius:5px;cursor:pointer;font-size:12px;line-height:1.4;';
+      btn.textContent = formattedText;
+      btn.onclick = () => {
+        applyTextToDOM(formattedText);
+        modal.remove();
       };
-      container.appendChild(btn);
+      listContainer.appendChild(btn);
     });
-    box.appendChild(container);
-
-    let btnRow=document.createElement('div');
-    btnRow.style.cssText='display:flex;gap:6px;';
-
-    let backBtn=document.createElement('button');
-    backBtn.innerText='← Back';
-    backBtn.style.cssText='flex:1;padding:8px;background:#6c757d;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:12px;font-weight:bold;';
-    backBtn.onclick=()=>{
-      document.body.removeChild(overlay);
-      if(window.reopenMasterLauncher) window.reopenMasterLauncher();
-    };
-    btnRow.appendChild(backBtn);
-
-    let editBtn=document.createElement('button');
-    editBtn.innerText='✏️ Edit Notes';
-    editBtn.style.cssText='flex:1.5;padding:8px;background:#17a2b8;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:12px;font-weight:bold;';
-    editBtn.onclick=()=>{
-      document.body.removeChild(overlay);
-      showEditModal();
-    };
-    btnRow.appendChild(editBtn);
-
-    let cancelBtn=document.createElement('button');
-    cancelBtn.innerText='Cancel';
-    cancelBtn.style.cssText='flex:1;padding:8px;background:#dc3545;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:12px;font-weight:bold;';
-    cancelBtn.onclick=()=>document.body.removeChild(overlay);
-    btnRow.appendChild(cancelBtn);
-
-    box.appendChild(btnRow);
-    overlay.appendChild(box);
-    document.body.appendChild(overlay);
   }
+  renderPresets();
 
-  function showEditModal(){
-    let phrases=getPhrases();
-    let overlay=document.createElement('div');
-    overlay.style.cssText='position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:999999;display:flex;align-items:center;justify-content:center;font-family:sans-serif;';
-    let box=document.createElement('div');
-    box.style.cssText='background:#fff;padding:20px;border-radius:8px;box-shadow:0 4px 10px rgba(0,0,0,0.3);width:450px;display:flex;flex-direction:column;color:#333;';
-    box.innerHTML=`<h3 style="margin-top:0;margin-bottom:8px;font-size:16px;color:#222;text-align:center;">Edit Preset Notes List</h3><p style="font-size:11px;color:#666;margin-bottom:10px;">Enter one note per line. Use <b>{DATE}</b> where you want today's date automatically filled.</p><textarea id="notes_txt" style="width:95%;height:220px;font-family:sans-serif;font-size:12px;padding:6px;margin-bottom:10px;">${phrases.join('\n')}</textarea><div style="display:flex;gap:10px;"><button id="save_notes" style="flex:1;padding:8px;background:#28a745;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:12px;font-weight:bold;">Save Changes</button><button id="cancel_edit" style="flex:1;padding:8px;background:#dc3545;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:12px;font-weight:bold;">Cancel</button></div>`;
-    overlay.appendChild(box);
-    document.body.appendChild(overlay);
-    document.getElementById('cancel_edit').onclick=()=>{
-      document.body.removeChild(overlay);
-      showMainModal();
-    };
-    document.getElementById('save_notes').onclick=()=>{
-      let lines=document.getElementById('notes_txt').value.split('\n').map(l=>l.trim()).filter(Boolean);
-      localStorage.setItem('my_preset_notes',JSON.stringify(lines));
-      document.body.removeChild(overlay);
-      showMainModal();
-    };
-  }
+  // Search Filter Event
+  document.getElementById('af_search').addEventListener('input', (e) => {
+    renderPresets(e.target.value);
+  });
 
-  function processTextSelection(str){
-    navigator.clipboard.writeText(str);
-    let modalBody=document.querySelector('#addActualFindingsModal .msd-modal-body, #addActualFindingsModal');
-    let target=modalBody?modalBody.querySelector('textarea, input[type="text"]:not([readonly])'):null;
-    if(target){
-      target.value=str;
-      target.focus();
-      target.dispatchEvent(new Event('input',{bubbles:true}));
-      target.dispatchEvent(new Event('change',{bubbles:true}));
-      showToast('Pasted into Pop-up!');
-    } else {
-      showToast('Copied to Clipboard! Press Ctrl+V to paste.');
+  // Dynamic Builder Event
+  document.getElementById('af_build_btn').onclick = () => {
+    const action = document.getElementById('af_action_select').value;
+    const person = document.getElementById('af_person_input').value.trim();
+    const company = document.getElementById('af_company_input').value.trim();
+
+    if (!person) {
+      alert("Please enter the name of the authorized person.");
+      return;
     }
-  }
 
-  function showToast(msg){
-    let toast=document.createElement('div');
-    toast.style.cssText='position:fixed;bottom:20px;right:20px;background:#28a745;color:#fff;padding:12px 20px;border-radius:6px;z-index:9999999;font-family:sans-serif;font-size:13px;box-shadow:0 2px 8px rgba(0,0,0,0.3);font-weight:bold;';
-    toast.innerText=msg;
-    document.body.appendChild(toast);
-    setTimeout(()=>document.body.removeChild(toast),2500);
-  }
+    const companyTag = company ? ` (${company.toUpperCase()})` : "";
+    let resultNote = "";
 
-  showMainModal();
+    if (action === "dispose") {
+      resultNote = `Repairs declined and asked to be disposed of by ${person}.${companyTag}`;
+    } else if (action === "return") {
+      resultNote = `Repairs declined and asked to be returned by ${person}.${companyTag}`;
+    } else if (action === "approve") {
+      resultNote = `Repairs approved by ${person}.${companyTag}`;
+    } else if (action === "storage") {
+      resultNote = `To be placed in the storage until further notice by ${person}.${companyTag}`;
+    }
+
+    applyTextToDOM(resultNote);
+    modal.remove();
+  };
+
+  // Close & Back Events
+  const close = () => modal.remove();
+  document.getElementById('af_close_x').onclick = close;
+  document.getElementById('af_cancel_btn').onclick = close;
+  modal.onclick = e => { if (e.target === modal) close(); };
+
+  document.getElementById('af_back_btn').onclick = () => {
+    close();
+    if (typeof window.reopenMasterLauncher === "function") {
+      window.reopenMasterLauncher();
+    }
+  };
 })();
