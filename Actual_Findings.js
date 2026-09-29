@@ -1,19 +1,9 @@
 (function(){
-  // Default contact list
+  // Default contacts list
   const defaultContacts = [
-    { name: "Shana Brown", company: "CORAM" },
-    { name: "Amy Kwong", company: "CORAM" },
-    { name: "Brian Fitzpatrick", company: "OPTION CARE" },
-    { name: "Carl Kerekes", company: "Walgreens" },
-    { name: "William Maturo", company: "CVS" },
-    { name: "Janey Mechler", company: "OPTUM" },
-    { name: "Heather LeClair", company: "OPTUM" },
-    { name: "David Rolph", company: "AmeriMed" },
-    { name: "Alexsis Gauthier", company: "NELC" },
-    { name: "Sheryl Guyer", company: "NELC" },
-    { name: "Lauren Lynch", company: "NELC" },
-    { name: "Michael O'Connor", company: "NELC" },
-    { name: "Joshua Kronick", company: "NELC" }
+    "Shana Brown", "Amy Kwong", "Brian Fitzpatrick", "Carl Kerekes", 
+    "William Maturo", "Janey Mechler", "Heather LeClair", "David Rolph", 
+    "Alexsis Gauthier", "Sheryl Guyer", "Lauren Lynch", "Michael O'Connor", "Joshua Kronick"
   ];
 
   // Base Presets List
@@ -40,16 +30,16 @@
     return `${mm}/${dd}/${yyyy}`;
   }
 
-  // LocalStorage Helpers for Custom Contacts & Presets
+  // LocalStorage Helpers
   function getCustomContacts() {
     try {
       return JSON.parse(localStorage.getItem('af_custom_contacts') || '[]');
     } catch(e) { return []; }
   }
 
-  function saveCustomContact(name, company) {
+  function saveCustomContact(name) {
     const customs = getCustomContacts();
-    customs.push({ name, company });
+    customs.push(name);
     localStorage.setItem('af_custom_contacts', JSON.stringify(customs));
   }
 
@@ -105,7 +95,7 @@
     }
   }
 
-  // Remove existing modal if present
+  // Remove existing modal
   const existing = document.getElementById('af-preset-modal');
   if (existing) existing.remove();
 
@@ -114,7 +104,7 @@
   modal.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.7);z-index:9999999;display:flex;align-items:center;justify-content:center;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;';
 
   const box = document.createElement('div');
-  box.style.cssText = 'background:#1e2329;padding:20px;border-radius:10px;box-shadow:0 8px 32px rgba(0,0,0,0.5);width:450px;max-height:85vh;display:flex;flex-direction:column;color:#f1f3f5;border:1px solid #2d333b;';
+  box.style.cssText = 'background:#1e2329;padding:20px;border-radius:10px;box-shadow:0 8px 32px rgba(0,0,0,0.5);width:430px;max-height:85vh;display:flex;flex-direction:column;color:#f1f3f5;border:1px solid #2d333b;';
 
   box.innerHTML = `
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
@@ -133,18 +123,13 @@
         <option value="storage">To be placed in storage until further notice by</option>
       </select>
       
-      <div style="display:grid;grid-template-columns:1fr 1.2fr auto;gap:6px;margin-bottom:8px;">
-        <!-- Reference Company Filter -->
-        <select id="af_company_filter" style="padding:7px;background:#1e2329;color:#8b949e;border:1px solid #444;border-radius:4px;font-size:12px;">
-          <option value="">Filter Company...</option>
-        </select>
-
+      <div style="display:flex;gap:6px;margin-bottom:8px;">
         <!-- Authorized Rep Input -->
-        <input type="text" id="af_person_input" list="af_contacts_list" placeholder="Authorized Person..." style="padding:7px;background:#1e2329;color:#fff;border:1px solid #444;border-radius:4px;font-size:12px;">
+        <input type="text" id="af_person_input" list="af_contacts_list" placeholder="Select or type Authorized Person..." style="flex:1;padding:7px;background:#1e2329;color:#fff;border:1px solid #444;border-radius:4px;font-size:12px;">
         <datalist id="af_contacts_list"></datalist>
 
         <!-- Add Contact Button -->
-        <button id="af_add_rep_btn" title="Add new rep & company" style="padding:7px 10px;background:#238636;color:#fff;border:none;border-radius:4px;cursor:pointer;font-weight:600;font-size:12px;">➕ Rep</button>
+        <button id="af_add_rep_btn" title="Add new rep name" style="padding:7px 12px;background:#238636;color:#fff;border:none;border-radius:4px;cursor:pointer;font-weight:600;font-size:12px;white-space:nowrap;">➕ Rep</button>
       </div>
 
       <button id="af_build_btn" style="width:100%;padding:8px;background:#1f6feb;color:#fff;border:none;border-radius:4px;cursor:pointer;font-weight:600;font-size:12px;">Insert Authorization Note</button>
@@ -169,50 +154,28 @@
   modal.appendChild(box);
   document.body.appendChild(modal);
 
-  const companyFilter = document.getElementById('af_company_filter');
   const contactsList = document.getElementById('af_contacts_list');
 
-  // Populates Companies and Rep Datalist
+  // Populate Rep Datalist
   function refreshContactUI() {
-    const allContacts = getAllContacts();
-    const companies = Array.from(new Set(allContacts.map(c => c.company))).sort();
-
-    const currentSelectedCompany = companyFilter.value;
-    companyFilter.innerHTML = `<option value="">Filter Company...</option>` + 
-      companies.map(comp => `<option value="${comp}" ${comp === currentSelectedCompany ? 'selected' : ''}>${comp}</option>`).join('');
-
     contactsList.innerHTML = "";
-    const filtered = currentSelectedCompany 
-      ? allContacts.filter(c => c.company === currentSelectedCompany) 
-      : allContacts;
-
-    filtered.forEach(c => {
+    getAllContacts().sort().forEach(name => {
       const opt = document.createElement('option');
-      opt.value = c.name;
-      opt.label = `${c.name} (${c.company})`;
+      opt.value = name;
       contactsList.appendChild(opt);
     });
   }
 
   refreshContactUI();
 
-  companyFilter.addEventListener('change', () => {
-    refreshContactUI();
-    document.getElementById('af_person_input').value = "";
-  });
-
-  // Add New Rep & Company Dynamic Flow
+  // Add New Rep Flow
   document.getElementById('af_add_rep_btn').onclick = () => {
     const repName = prompt("Enter Authorized Person Name (e.g., John Smith):");
     if (!repName || !repName.trim()) return;
 
-    const companyName = prompt("Enter Company/Client Name (e.g., CORAM):");
-    if (!companyName || !companyName.trim()) return;
-
-    saveCustomContact(repName.trim(), companyName.trim().toUpperCase());
+    saveCustomContact(repName.trim());
     refreshContactUI();
     document.getElementById('af_person_input').value = repName.trim();
-    alert(`Added ${repName.trim()} (${companyName.trim().toUpperCase()}) to contacts list!`);
   };
 
   // Render Presets
