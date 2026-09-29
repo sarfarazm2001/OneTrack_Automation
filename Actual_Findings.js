@@ -97,7 +97,7 @@
   modal.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.7);z-index:9999999;display:flex;align-items:center;justify-content:center;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;';
 
   const box = document.createElement('div');
-  box.style.cssText = 'background:#1e2329;padding:20px;border-radius:10px;box-shadow:0 8px 32px rgba(0,0,0,0.5);width:470px;max-height:85vh;display:flex;flex-direction:column;color:#f1f3f5;border:1px solid #2d333b;';
+  box.style.cssText = 'background:#1e2329;padding:20px;border-radius:10px;box-shadow:0 8px 32px rgba(0,0,0,0.5);width:450px;max-height:85vh;display:flex;flex-direction:column;color:#f1f3f5;border:1px solid #2d333b;';
 
   box.innerHTML = `
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
@@ -194,20 +194,7 @@
   };
 
   const listContainer = document.getElementById('af_presets_list');
-
-  function movePreset(index, direction) {
-    const list = getStoredPresets();
-    const targetIndex = index + direction;
-
-    if (targetIndex < 0 || targetIndex >= list.length) return;
-
-    const temp = list[index];
-    list[index] = list[targetIndex];
-    list[targetIndex] = temp;
-
-    saveStoredPresets(list);
-    renderPresets(document.getElementById('af_search').value);
-  }
+  let draggedItemIndex = null;
 
   function renderPresets(filter = "") {
     listContainer.innerHTML = "";
@@ -219,26 +206,18 @@
       if (filter && !displayFormatted.toLowerCase().includes(filter.toLowerCase())) return;
 
       const row = document.createElement('div');
-      row.style.cssText = 'display:flex;align-items:center;gap:4px;background:#232830;border:1px solid #30363d;border-radius:5px;padding:4px 8px;';
+      row.draggable = filter === ""; // Disable drag during active filtering
+      row.dataset.index = index;
+      row.style.cssText = 'display:flex;align-items:center;gap:6px;background:#232830;border:1px solid #30363d;border-radius:5px;padding:4px 8px;cursor:grab;user-select:none;transition:background 0.2s, border-color 0.2s;';
 
-      // Move Up Button
-      const upBtn = document.createElement('button');
-      upBtn.textContent = '⬆️';
-      upBtn.title = 'Move Up';
-      upBtn.style.cssText = 'background:none;border:none;cursor:pointer;font-size:11px;padding:2px;opacity:' + (index === 0 ? '0.2' : '0.8') + ';';
-      upBtn.disabled = index === 0 || filter !== "";
-      upBtn.onclick = (e) => { e.stopPropagation(); movePreset(index, -1); };
-
-      // Move Down Button
-      const downBtn = document.createElement('button');
-      downBtn.textContent = '⬇️';
-      downBtn.title = 'Move Down';
-      downBtn.style.cssText = 'background:none;border:none;cursor:pointer;font-size:11px;padding:2px;opacity:' + (index === presets.length - 1 ? '0.2' : '0.8') + ';';
-      downBtn.disabled = index === presets.length - 1 || filter !== "";
-      downBtn.onclick = (e) => { e.stopPropagation(); movePreset(index, 1); };
+      // Drag Handle
+      const dragHandle = document.createElement('span');
+      dragHandle.textContent = '⋮⋮';
+      dragHandle.title = 'Drag to reorder';
+      dragHandle.style.cssText = 'color:#6e7681;font-size:14px;cursor:grab;padding-right:2px;';
 
       const textBtn = document.createElement('button');
-      textBtn.style.cssText = 'flex:1;text-align:left;background:none;border:none;color:#e6edf3;cursor:pointer;font-size:12px;line-height:1.4;padding:5px 0;margin:0 4px;';
+      textBtn.style.cssText = 'flex:1;text-align:left;background:none;border:none;color:#e6edf3;cursor:pointer;font-size:12px;line-height:1.4;padding:5px 0;';
       textBtn.textContent = displayFormatted;
       textBtn.onclick = () => {
         applyTextToDOM(displayFormatted);
@@ -274,8 +253,50 @@
         }
       };
 
-      row.appendChild(upBtn);
-      row.appendChild(downBtn);
+      // Drag and Drop Event Listeners
+      row.ondragstart = (e) => {
+        draggedItemIndex = index;
+        e.dataTransfer.effectAllowed = 'move';
+        row.style.opacity = '0.4';
+      };
+
+      row.ondragend = () => {
+        draggedItemIndex = null;
+        row.style.opacity = '1';
+        Array.from(listContainer.children).forEach(child => {
+          child.style.borderTop = '';
+          child.style.borderBottom = '';
+        });
+      };
+
+      row.ondragover = (e) => {
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'move';
+      };
+
+      row.ondragenter = () => {
+        if (draggedItemIndex === null || draggedItemIndex === index) return;
+        row.style.borderColor = '#58a6ff';
+      };
+
+      row.ondragleave = () => {
+        row.style.borderColor = '#30363d';
+      };
+
+      row.ondrop = (e) => {
+        e.preventDefault();
+        row.style.borderColor = '#30363d';
+        if (draggedItemIndex === null || draggedItemIndex === index) return;
+
+        const list = getStoredPresets();
+        const draggedItem = list.splice(draggedItemIndex, 1)[0];
+        list.splice(index, 0, draggedItem);
+
+        saveStoredPresets(list);
+        renderPresets(document.getElementById('af_search').value);
+      };
+
+      row.appendChild(dragHandle);
       row.appendChild(textBtn);
       row.appendChild(editBtn);
       row.appendChild(delBtn);
