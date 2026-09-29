@@ -1,13 +1,13 @@
 (function(){
-  // Company-to-Rep Mapping
+  // Correct Company-to-Rep Mapping
   const companyContacts = {
-    "AmeriMed": ["Shana Brown"],
-    "CORAM": ["Amy Kwong", "Brian Fitzpatrick"],
-    "CVS": ["Carl Kerekes"],
-    "NELC": ["William Maturo", "Janey Mechler"],
-    "OPTION CARE": ["Heather LeClair", "David Rolph"],
-    "OPTUM": ["Alexsis Gauthier", "Sheryl Guyer"],
-    "Walgreens": ["Lauren Lynch", "Michael O'Connor", "Joshua Kronick"]
+    "AmeriMed": ["David Rolph"],
+    "CORAM": ["Shana Brown", "Amy Kwong"],
+    "CVS": ["William Maturo"],
+    "NELC": ["Alexsis Gauthier", "Sheryl Guyer", "Lauren Lynch", "Michael O'Connor", "Joshua Kronick"],
+    "OPTION CARE": ["Brian Fitzpatrick"],
+    "OPTUM": ["Janey Mechler", "Heather LeClair"],
+    "Walgreens": ["Carl Kerekes"]
   };
 
   const defaultPresets = [
@@ -108,7 +108,6 @@
       </select>
       
       <div style="display:flex;gap:6px;margin-bottom:8px;">
-        <!-- Single Authorized Rep Dropdown with Grouped Company Headers -->
         <select id="af_person_select" style="flex:1;padding:7px;background:#1e2329;color:#fff;border:1px solid #444;border-radius:4px;font-size:12px;">
           <option value="">Authorized Person...</option>
         </select>
@@ -140,14 +139,12 @@
 
   const personSelect = document.getElementById('af_person_select');
 
-  // Populate Dropdown using OPTGROUP (Company Name Headers)
   function renderGroupedContacts() {
     personSelect.innerHTML = '<option value="">Authorized Person...</option>';
 
-    // Render preset companies and their reps
     Object.keys(companyContacts).sort().forEach(company => {
       const group = document.createElement('optgroup');
-      group.label = company; // Non-selectable header label
+      group.label = company;
 
       companyContacts[company].sort().forEach(name => {
         const opt = document.createElement('option');
@@ -159,7 +156,6 @@
       personSelect.appendChild(group);
     });
 
-    // Render custom added contacts
     const customs = getCustomContacts();
     if (customs.length > 0) {
       const customGroup = document.createElement('optgroup');
@@ -178,7 +174,6 @@
 
   renderGroupedContacts();
 
-  // Add custom rep
   document.getElementById('af_add_rep_btn').onclick = () => {
     const repName = prompt("Enter Authorized Person Name (e.g., John Smith):");
     if (!repName || !repName.trim()) return;
@@ -188,7 +183,6 @@
     personSelect.value = repName.trim();
   };
 
-  // Render Presets List
   const listContainer = document.getElementById('af_presets_list');
   function renderPresets(filter = "") {
     listContainer.innerHTML = "";
