@@ -1,46 +1,19 @@
 (function(){
-  // Improved DOM Owner Scraper targeted strictly at OneTrack grid labels
-  function detectCompanyFromDOM() {
-    const allElements = Array.from(document.querySelectorAll('td, th, label, div, span'));
-    const target = allElements.find(el => {
-      const directText = Array.from(el.childNodes)
-        .filter(n => n.nodeType === Node.TEXT_NODE)
-        .map(n => n.textContent.trim())
-        .join(' ');
-      return (directText || el.textContent.trim()).toLowerCase() === "owner";
-    });
-
-    let val = "";
-    if (target) {
-      if (target.nextElementSibling) {
-        val = target.nextElementSibling.innerText || target.nextElementSibling.textContent;
-      } else if (target.parentElement && target.parentElement.nextElementSibling) {
-        val = target.parentElement.nextElementSibling.innerText || target.parentElement.nextElementSibling.textContent;
-      }
-    }
-    if (val) {
-      val = val.trim().split('-')[0].trim();
-      if (!/execute|history|ship/i.test(val)) return val;
-    }
-    return "";
-  }
-
-  // Get Today's Date formatted MM/DD/YYYY
-  function getTodayFormatted() {
-    const d = new Date();
-    const mm = String(d.getMonth() + 1).padStart(2, '0');
-    const dd = String(d.getDate()).padStart(2, '0');
-    const yyyy = d.getFullYear();
-    return `${mm}/${dd}/${yyyy}`;
-  }
-
-  const detectedCompany = detectCompanyFromDOM();
-
-  // Frequent Rep Contacts List for Dropdown
-  const frequentContacts = [
-    "Shana Brown", "Amy Kwong", "Brian Fitzpatrick", "Carl Kerekes", 
-    "William Maturo", "Janey Mechler", "Heather LeClair", "David Rolph", 
-    "Alexsis Gauthier", "Sheryl Guyer", "Lauren Lynch", "Michael O'Connor", "Joshua Kronick"
+  // Contact list mapping reps to their respective companies for UI filtering
+  const contacts = [
+    { name: "Shana Brown", company: "CORAM" },
+    { name: "Amy Kwong", company: "CORAM" },
+    { name: "Brian Fitzpatrick", company: "OPTION CARE" },
+    { name: "Carl Kerekes", company: "Walgreens" },
+    { name: "William Maturo", company: "CVS" },
+    { name: "Janey Mechler", company: "OPTUM" },
+    { name: "Heather LeClair", company: "OPTUM" },
+    { name: "David Rolph", company: "AmeriMed" },
+    { name: "Alexsis Gauthier", company: "NELC" },
+    { name: "Sheryl Guyer", company: "NELC" },
+    { name: "Lauren Lynch", company: "NELC" },
+    { name: "Michael O'Connor", company: "NELC" },
+    { name: "Joshua Kronick", company: "NELC" }
   ];
 
   // Base Presets List
@@ -59,7 +32,14 @@
     "Completed 10 day charge cycle per OEM recommendation. Passed all functional tests without error and passed PM per manufacturer specifications."
   ];
 
-  // Load local custom presets
+  function getTodayFormatted() {
+    const d = new Date();
+    const mm = String(d.getMonth() + 1).padStart(2, '0');
+    const dd = String(d.getDate()).padStart(2, '0');
+    const yyyy = d.getFullYear();
+    return `${mm}/${dd}/${yyyy}`;
+  }
+
   function getCustomPresets() {
     try {
       return JSON.parse(localStorage.getItem('af_custom_presets') || '[]');
@@ -70,9 +50,37 @@
     localStorage.setItem('af_custom_presets', JSON.stringify(list));
   }
 
-  // Insert into DOM
+  // Precise Target Finder for "Actual Findings" field ONLY
   function applyTextToDOM(text) {
-    const targetEl = document.querySelector('textarea[name*="actualFindings"], textarea[id*="actualFindings"], textarea, input[name*="actualFindings"]');
+    const textareas = Array.from(document.querySelectorAll('textarea, input[type="text"]'));
+    
+    // Find text field associated with "Actual Findings"
+    let targetEl = textareas.find(el => {
+      const nameOrId = (el.name || el.id || "").toLowerCase();
+      return nameOrId.includes("actualfinding") || nameOrId.includes("actual_finding") || nameOrId.includes("findings");
+    });
+
+    // If not matched by attribute name, look for adjacent label text
+    if (!targetEl) {
+      const labels = Array.from(document.querySelectorAll('label, td, th, span, div'));
+      const afLabel = labels.find(el => el.children.length === 0 && el.textContent.trim().toLowerCase().includes("actual findings"));
+      if (afLabel) {
+        if (afLabel.nextElementSibling && afLabel.nextElementSibling.querySelector('textarea')) {
+          targetEl = afLabel.nextElementSibling.querySelector('textarea');
+        } else if (afLabel.parentElement) {
+          targetEl = afLabel.parentElement.querySelector('textarea');
+        }
+      }
+    }
+
+    // Fallback: Pick first textarea that is NOT "Customer Instruction"
+    if (!targetEl) {
+      targetEl = textareas.find(el => {
+        const nameOrId = (el.name || el.id || "").toLowerCase();
+        return !nameOrId.includes("customerinstruction") && !nameOrId.includes("instruction");
+      });
+    }
+
     if (targetEl) {
       targetEl.value = text;
       targetEl.dispatchEvent(new Event('input', { bubbles: true }));
@@ -83,7 +91,7 @@
     }
   }
 
-  // Remove existing modal
+  // Remove existing modal if present
   const existing = document.getElementById('af-preset-modal');
   if (existing) existing.remove();
 
@@ -93,6 +101,9 @@
 
   const box = document.createElement('div');
   box.style.cssText = 'background:#1e2329;padding:20px;border-radius:10px;box-shadow:0 8px 32px rgba(0,0,0,0.5);width:430px;max-height:85vh;display:flex;flex-direction:column;color:#f1f3f5;border:1px solid #2d333b;';
+
+  // Extract unique companies for filter dropdown
+  const uniqueCompanies = Array.from(new Set(contacts.map(c => c.company))).sort();
 
   box.innerHTML = `
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
@@ -110,15 +121,20 @@
           <option value="approve">Repairs approved by</option>
           <option value="storage">To be placed in storage until further notice by</option>
         </select>
+        
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;">
-          <input type="text" id="af_person_input" list="af_contacts_list" placeholder="Select or type Person..." style="padding:7px;background:#1e2329;color:#fff;border:1px solid #444;border-radius:4px;font-size:12px;">
-          <datalist id="af_contacts_list">
-            ${frequentContacts.map(c => `<option value="${c}">`).join('')}
-          </datalist>
-          <input type="text" id="af_company_input" value="${detectedCompany}" placeholder="Company (e.g. CORAM)" style="padding:7px;background:#1e2329;color:#fff;border:1px solid #444;border-radius:4px;font-size:12px;">
+          <!-- Reference Company Filter -->
+          <select id="af_company_filter" style="padding:7px;background:#1e2329;color:#8b949e;border:1px solid #444;border-radius:4px;font-size:12px;">
+            <option value="">Filter by Company...</option>
+            ${uniqueCompanies.map(comp => `<option value="${comp}">${comp}</option>`).join('')}
+          </select>
+
+          <!-- Authorized Rep Dropdown/Input -->
+          <input type="text" id="af_person_input" list="af_contacts_list" placeholder="Authorized Person..." style="padding:7px;background:#1e2329;color:#fff;border:1px solid #444;border-radius:4px;font-size:12px;">
+          <datalist id="af_contacts_list"></datalist>
         </div>
       </div>
-      <button id="af_build_btn" style="width:100%;padding:8px;background:#1f6feb;color:#fff;border:none;border-radius:4px;cursor:pointer;font-weight:600;font-size:12px;">Insert Built Authorization Note</button>
+      <button id="af_build_btn" style="width:100%;padding:8px;background:#1f6feb;color:#fff;border:none;border-radius:4px;cursor:pointer;font-weight:600;font-size:12px;">Insert Authorization Note</button>
     </div>
 
     <!-- Search & Add Bar -->
@@ -139,6 +155,32 @@
 
   modal.appendChild(box);
   document.body.appendChild(modal);
+
+  // Populate Contact Datalist based on Company Filter
+  const companyFilter = document.getElementById('af_company_filter');
+  const contactsList = document.getElementById('af_contacts_list');
+
+  function updateContactDatalist() {
+    const selectedCompany = companyFilter.value;
+    contactsList.innerHTML = "";
+    
+    const filtered = selectedCompany 
+      ? contacts.filter(c => c.company === selectedCompany) 
+      : contacts;
+
+    filtered.forEach(c => {
+      const opt = document.createElement('option');
+      opt.value = c.name;
+      opt.label = `${c.name} (${c.company})`;
+      contactsList.appendChild(opt);
+    });
+  }
+  updateContactDatalist();
+
+  companyFilter.addEventListener('change', () => {
+    updateContactDatalist();
+    document.getElementById('af_person_input').value = ""; // clear person field when company filter changes
+  });
 
   // Render Presets
   const listContainer = document.getElementById('af_presets_list');
@@ -180,28 +222,25 @@
     }
   };
 
-  // Dynamic Builder
+  // Dynamic Builder (Omits Company Name completely from output text)
   document.getElementById('af_build_btn').onclick = () => {
     const action = document.getElementById('af_action_select').value;
     const person = document.getElementById('af_person_input').value.trim();
-    const company = document.getElementById('af_company_input').value.trim();
 
     if (!person) {
       alert("Please select or enter the name of the authorized person.");
       return;
     }
 
-    const companyTag = company ? ` (${company.toUpperCase()})` : "";
     let resultNote = "";
-
     if (action === "dispose") {
-      resultNote = `Repairs declined and asked to be disposed of by ${person}.${companyTag}`;
+      resultNote = `Repairs declined and asked to be disposed of by ${person}.`;
     } else if (action === "return") {
-      resultNote = `Repairs declined and asked to be returned by ${person}.${companyTag}`;
+      resultNote = `Repairs declined and asked to be returned by ${person}.`;
     } else if (action === "approve") {
-      resultNote = `Repairs approved by ${person}.${companyTag}`;
+      resultNote = `Repairs approved by ${person}.`;
     } else if (action === "storage") {
-      resultNote = `To be placed in the storage until further notice by ${person}.${companyTag}`;
+      resultNote = `To be placed in the storage until further notice by ${person}.`;
     }
 
     applyTextToDOM(resultNote);
