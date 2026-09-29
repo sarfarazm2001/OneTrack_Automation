@@ -10,7 +10,7 @@
     "Walgreens": ["Carl Kerekes"]
   };
 
-  const defaultPresets = [
+  const initialDefaults = [
     "TE: 8TR, 77TR, 148TR, 134TR, 6J",
     "Outdated battery and it needs to be changed. (JOEY)",
     "Battery replaced on {DATE}. (JOEY)",
@@ -33,6 +33,20 @@
     return `${mm}/${dd}/${yyyy}`;
   }
 
+  // Manage presets in localStorage so all items can be deleted or edited
+  function getStoredPresets() {
+    try {
+      const stored = localStorage.getItem('af_preset_list_v2');
+      if (stored) return JSON.parse(stored);
+    } catch(e) {}
+    localStorage.setItem('af_preset_list_v2', JSON.stringify(initialDefaults));
+    return initialDefaults;
+  }
+
+  function saveStoredPresets(list) {
+    localStorage.setItem('af_preset_list_v2', JSON.stringify(list));
+  }
+
   function getCustomContacts() {
     try { return JSON.parse(localStorage.getItem('af_custom_contacts') || '[]'); } catch(e) { return []; }
   }
@@ -43,22 +57,19 @@
     localStorage.setItem('af_custom_contacts', JSON.stringify(customs));
   }
 
-  function getCustomPresets() {
-    try { return JSON.parse(localStorage.getItem('af_custom_presets') || '[]'); } catch(e) { return []; }
+  // Strip brackets/parentheses content before inserting text
+  function cleanBracketContent(text) {
+    return text.replace(/\s*\([^)]*\)/g, '').trim();
   }
 
-  function saveCustomPresets(list) {
-    localStorage.setItem('af_custom_presets', JSON.stringify(list));
-  }
+  // DOM Injection
+  function applyTextToDOM(rawText) {
+    const text = cleanBracketContent(rawText);
 
-  // Exact Target DOM Injection
-  function applyTextToDOM(text) {
-    // Direct ID target from DevTools inspection
     let targetEl = document.getElementById('findingsTextArea') || 
                    document.querySelector('textarea[name="Finding"]') || 
                    document.querySelector('#actualFindingsAddForm textarea');
 
-    // Fallback: search activeElement or all textareas
     if (!targetEl) {
       if (document.activeElement && (document.activeElement.tagName === 'TEXTAREA' || document.activeElement.tagName === 'INPUT')) {
         targetEl = document.activeElement;
@@ -69,7 +80,6 @@
 
     if (targetEl) {
       targetEl.value = text;
-      // Trigger input & change events so web app/framework recognizes the entry
       targetEl.dispatchEvent(new Event('input', { bubbles: true }));
       targetEl.dispatchEvent(new Event('change', { bubbles: true }));
       targetEl.focus();
@@ -87,7 +97,7 @@
   modal.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.7);z-index:9999999;display:flex;align-items:center;justify-content:center;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;';
 
   const box = document.createElement('div');
-  box.style.cssText = 'background:#1e2329;padding:20px;border-radius:10px;box-shadow:0 8px 32px rgba(0,0,0,0.5);width:430px;max-height:85vh;display:flex;flex-direction:column;color:#f1f3f5;border:1px solid #2d333b;';
+  box.style.cssText = 'background:#1e2329;padding:20px;border-radius:10px;box-shadow:0 8px 32px rgba(0,0,0,0.5);width:450px;max-height:85vh;display:flex;flex-direction:column;color:#f1f3f5;border:1px solid #2d333b;';
 
   box.innerHTML = `
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
@@ -128,6 +138,7 @@
 
     <!-- Footer Controls -->
     <div style="display:flex;gap:8px;margin-top:12px;">
+      <button id="af_reset_btn" title="Reset presets to default list" style="padding:8px 12px;background:#484f58;color:#fff;border:none;border-radius:4px;cursor:pointer;font-weight:600;font-size:12px;">↺ Reset Defaults</button>
       <button id="af_back_btn" style="flex:1;padding:8px;background:#363d4a;color:#fff;border:none;border-radius:4px;cursor:pointer;font-weight:600;font-size:12px;">← Back</button>
       <button id="af_cancel_btn" style="flex:1;padding:8px;background:#da3633;color:#fff;border:none;border-radius:4px;cursor:pointer;font-weight:600;font-size:12px;">Cancel</button>
     </div>
@@ -183,25 +194,63 @@
   };
 
   const listContainer = document.getElementById('af_presets_list');
+
   function renderPresets(filter = "") {
     listContainer.innerHTML = "";
     const today = getTodayFormatted();
-    const allPresets = [...defaultPresets, ...getCustomPresets()];
+    const presets = getStoredPresets();
 
-    allPresets.forEach(pText => {
-      const formattedText = pText.replace('{DATE}', today);
-      if (filter && !formattedText.toLowerCase().includes(filter.toLowerCase())) return;
+    presets.forEach((pText, index) => {
+      const displayFormatted = pText.replace('{DATE}', today);
+      if (filter && !displayFormatted.toLowerCase().includes(filter.toLowerCase())) return;
 
-      const btn = document.createElement('button');
-      btn.style.cssText = 'text-align:left;padding:9px;background:#232830;color:#e6edf3;border:1px solid #30363d;border-radius:5px;cursor:pointer;font-size:12px;line-height:1.4;';
-      btn.textContent = formattedText;
-      btn.onclick = () => {
-        applyTextToDOM(formattedText);
+      const row = document.createElement('div');
+      row.style.cssText = 'display:flex;align-items:center;gap:6px;background:#232830;border:1px solid #30363d;border-radius:5px;padding:4px 8px;';
+
+      const textBtn = document.createElement('button');
+      textBtn.style.cssText = 'flex:1;text-align:left;background:none;border:none;color:#e6edf3;cursor:pointer;font-size:12px;line-height:1.4;padding:5px 0;';
+      textBtn.textContent = displayFormatted;
+      textBtn.onclick = () => {
+        applyTextToDOM(displayFormatted);
         modal.remove();
       };
-      listContainer.appendChild(btn);
+
+      const editBtn = document.createElement('button');
+      editBtn.textContent = '✏️';
+      editBtn.title = 'Edit item';
+      editBtn.style.cssText = 'background:none;border:none;cursor:pointer;font-size:12px;padding:4px;opacity:0.8;';
+      editBtn.onclick = (e) => {
+        e.stopPropagation();
+        const updated = prompt("Edit preset:", pText);
+        if (updated !== null && updated.trim() !== "") {
+          const list = getStoredPresets();
+          list[index] = updated.trim();
+          saveStoredPresets(list);
+          renderPresets(document.getElementById('af_search').value);
+        }
+      };
+
+      const delBtn = document.createElement('button');
+      delBtn.textContent = '🗑️';
+      delBtn.title = 'Delete item';
+      delBtn.style.cssText = 'background:none;border:none;cursor:pointer;font-size:12px;padding:4px;opacity:0.8;';
+      delBtn.onclick = (e) => {
+        e.stopPropagation();
+        if (confirm(`Delete this preset?\n\n"${pText}"`)) {
+          const list = getStoredPresets();
+          list.splice(index, 1);
+          saveStoredPresets(list);
+          renderPresets(document.getElementById('af_search').value);
+        }
+      };
+
+      row.appendChild(textBtn);
+      row.appendChild(editBtn);
+      row.appendChild(delBtn);
+      listContainer.appendChild(row);
     });
   }
+
   renderPresets();
 
   document.getElementById('af_search').addEventListener('input', (e) => {
@@ -211,9 +260,16 @@
   document.getElementById('af_add_btn').onclick = () => {
     const newNote = prompt("Enter new preset note:");
     if (newNote && newNote.trim()) {
-      const customs = getCustomPresets();
-      customs.push(newNote.trim());
-      saveCustomPresets(customs);
+      const list = getStoredPresets();
+      list.push(newNote.trim());
+      saveStoredPresets(list);
+      renderPresets(document.getElementById('af_search').value);
+    }
+  };
+
+  document.getElementById('af_reset_btn').onclick = () => {
+    if (confirm("Reset all presets back to original defaults? Any customized edits or deletions will be reset.")) {
+      saveStoredPresets(initialDefaults);
       renderPresets(document.getElementById('af_search').value);
     }
   };
