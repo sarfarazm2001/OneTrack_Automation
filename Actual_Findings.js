@@ -1,6 +1,6 @@
 (function(){
-  // Contact list mapping reps to their respective companies for UI filtering
-  const contacts = [
+  // Default contact list
+  const defaultContacts = [
     { name: "Shana Brown", company: "CORAM" },
     { name: "Amy Kwong", company: "CORAM" },
     { name: "Brian Fitzpatrick", company: "OPTION CARE" },
@@ -40,6 +40,23 @@
     return `${mm}/${dd}/${yyyy}`;
   }
 
+  // LocalStorage Helpers for Custom Contacts & Presets
+  function getCustomContacts() {
+    try {
+      return JSON.parse(localStorage.getItem('af_custom_contacts') || '[]');
+    } catch(e) { return []; }
+  }
+
+  function saveCustomContact(name, company) {
+    const customs = getCustomContacts();
+    customs.push({ name, company });
+    localStorage.setItem('af_custom_contacts', JSON.stringify(customs));
+  }
+
+  function getAllContacts() {
+    return [...defaultContacts, ...getCustomContacts()];
+  }
+
   function getCustomPresets() {
     try {
       return JSON.parse(localStorage.getItem('af_custom_presets') || '[]');
@@ -50,17 +67,15 @@
     localStorage.setItem('af_custom_presets', JSON.stringify(list));
   }
 
-  // Precise Target Finder for "Actual Findings" field ONLY
+  // Target Finder for Actual Findings field ONLY
   function applyTextToDOM(text) {
     const textareas = Array.from(document.querySelectorAll('textarea, input[type="text"]'));
     
-    // Find text field associated with "Actual Findings"
     let targetEl = textareas.find(el => {
       const nameOrId = (el.name || el.id || "").toLowerCase();
       return nameOrId.includes("actualfinding") || nameOrId.includes("actual_finding") || nameOrId.includes("findings");
     });
 
-    // If not matched by attribute name, look for adjacent label text
     if (!targetEl) {
       const labels = Array.from(document.querySelectorAll('label, td, th, span, div'));
       const afLabel = labels.find(el => el.children.length === 0 && el.textContent.trim().toLowerCase().includes("actual findings"));
@@ -73,7 +88,6 @@
       }
     }
 
-    // Fallback: Pick first textarea that is NOT "Customer Instruction"
     if (!targetEl) {
       targetEl = textareas.find(el => {
         const nameOrId = (el.name || el.id || "").toLowerCase();
@@ -100,10 +114,7 @@
   modal.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.7);z-index:9999999;display:flex;align-items:center;justify-content:center;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;';
 
   const box = document.createElement('div');
-  box.style.cssText = 'background:#1e2329;padding:20px;border-radius:10px;box-shadow:0 8px 32px rgba(0,0,0,0.5);width:430px;max-height:85vh;display:flex;flex-direction:column;color:#f1f3f5;border:1px solid #2d333b;';
-
-  // Extract unique companies for filter dropdown
-  const uniqueCompanies = Array.from(new Set(contacts.map(c => c.company))).sort();
+  box.style.cssText = 'background:#1e2329;padding:20px;border-radius:10px;box-shadow:0 8px 32px rgba(0,0,0,0.5);width:450px;max-height:85vh;display:flex;flex-direction:column;color:#f1f3f5;border:1px solid #2d333b;';
 
   box.innerHTML = `
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
@@ -114,33 +125,35 @@
     <!-- Dynamic Builder Section -->
     <div style="background:#262c36;padding:12px;border-radius:6px;border:1px solid #363d4a;margin-bottom:12px;">
       <div style="font-size:11px;font-weight:700;color:#58a6ff;text-transform:uppercase;margin-bottom:8px;">⚡ Dynamic Authorization Builder</div>
-      <div style="display:grid;grid-template-columns:1fr;gap:8px;margin-bottom:8px;">
-        <select id="af_action_select" style="width:100%;padding:7px;background:#1e2329;color:#fff;border:1px solid #444;border-radius:4px;font-size:12px;">
-          <option value="dispose">Repairs declined & asked to be disposed of by</option>
-          <option value="return">Repairs declined & asked to be returned by</option>
-          <option value="approve">Repairs approved by</option>
-          <option value="storage">To be placed in storage until further notice by</option>
+      
+      <select id="af_action_select" style="width:100%;padding:7px;background:#1e2329;color:#fff;border:1px solid #444;border-radius:4px;font-size:12px;margin-bottom:8px;">
+        <option value="dispose">Repairs declined & asked to be disposed of by</option>
+        <option value="return">Repairs declined & asked to be returned by</option>
+        <option value="approve">Repairs approved by</option>
+        <option value="storage">To be placed in storage until further notice by</option>
+      </select>
+      
+      <div style="display:grid;grid-template-columns:1fr 1.2fr auto;gap:6px;margin-bottom:8px;">
+        <!-- Reference Company Filter -->
+        <select id="af_company_filter" style="padding:7px;background:#1e2329;color:#8b949e;border:1px solid #444;border-radius:4px;font-size:12px;">
+          <option value="">Filter Company...</option>
         </select>
-        
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;">
-          <!-- Reference Company Filter -->
-          <select id="af_company_filter" style="padding:7px;background:#1e2329;color:#8b949e;border:1px solid #444;border-radius:4px;font-size:12px;">
-            <option value="">Filter by Company...</option>
-            ${uniqueCompanies.map(comp => `<option value="${comp}">${comp}</option>`).join('')}
-          </select>
 
-          <!-- Authorized Rep Dropdown/Input -->
-          <input type="text" id="af_person_input" list="af_contacts_list" placeholder="Authorized Person..." style="padding:7px;background:#1e2329;color:#fff;border:1px solid #444;border-radius:4px;font-size:12px;">
-          <datalist id="af_contacts_list"></datalist>
-        </div>
+        <!-- Authorized Rep Input -->
+        <input type="text" id="af_person_input" list="af_contacts_list" placeholder="Authorized Person..." style="padding:7px;background:#1e2329;color:#fff;border:1px solid #444;border-radius:4px;font-size:12px;">
+        <datalist id="af_contacts_list"></datalist>
+
+        <!-- Add Contact Button -->
+        <button id="af_add_rep_btn" title="Add new rep & company" style="padding:7px 10px;background:#238636;color:#fff;border:none;border-radius:4px;cursor:pointer;font-weight:600;font-size:12px;">➕ Rep</button>
       </div>
+
       <button id="af_build_btn" style="width:100%;padding:8px;background:#1f6feb;color:#fff;border:none;border-radius:4px;cursor:pointer;font-weight:600;font-size:12px;">Insert Authorization Note</button>
     </div>
 
-    <!-- Search & Add Bar -->
+    <!-- Search & Add Preset Bar -->
     <div style="display:flex;gap:6px;margin-bottom:10px;">
       <input type="text" id="af_search" placeholder="🔍 Search presets..." style="flex:1;padding:8px;background:#1e2329;color:#fff;border:1px solid #363d4a;border-radius:4px;font-size:12px;box-sizing:border-box;">
-      <button id="af_add_btn" style="padding:8px 12px;background:#238636;color:#fff;border:none;border-radius:4px;cursor:pointer;font-weight:600;font-size:12px;white-space:nowrap;">➕ Add Note</button>
+      <button id="af_add_btn" style="padding:8px 12px;background:#238636;color:#fff;border:none;border-radius:4px;cursor:pointer;font-weight:600;font-size:12px;white-space:nowrap;">➕ Add Preset</button>
     </div>
 
     <!-- Presets List -->
@@ -156,17 +169,22 @@
   modal.appendChild(box);
   document.body.appendChild(modal);
 
-  // Populate Contact Datalist based on Company Filter
   const companyFilter = document.getElementById('af_company_filter');
   const contactsList = document.getElementById('af_contacts_list');
 
-  function updateContactDatalist() {
-    const selectedCompany = companyFilter.value;
+  // Populates Companies and Rep Datalist
+  function refreshContactUI() {
+    const allContacts = getAllContacts();
+    const companies = Array.from(new Set(allContacts.map(c => c.company))).sort();
+
+    const currentSelectedCompany = companyFilter.value;
+    companyFilter.innerHTML = `<option value="">Filter Company...</option>` + 
+      companies.map(comp => `<option value="${comp}" ${comp === currentSelectedCompany ? 'selected' : ''}>${comp}</option>`).join('');
+
     contactsList.innerHTML = "";
-    
-    const filtered = selectedCompany 
-      ? contacts.filter(c => c.company === selectedCompany) 
-      : contacts;
+    const filtered = currentSelectedCompany 
+      ? allContacts.filter(c => c.company === currentSelectedCompany) 
+      : allContacts;
 
     filtered.forEach(c => {
       const opt = document.createElement('option');
@@ -175,12 +193,27 @@
       contactsList.appendChild(opt);
     });
   }
-  updateContactDatalist();
+
+  refreshContactUI();
 
   companyFilter.addEventListener('change', () => {
-    updateContactDatalist();
-    document.getElementById('af_person_input').value = ""; // clear person field when company filter changes
+    refreshContactUI();
+    document.getElementById('af_person_input').value = "";
   });
+
+  // Add New Rep & Company Dynamic Flow
+  document.getElementById('af_add_rep_btn').onclick = () => {
+    const repName = prompt("Enter Authorized Person Name (e.g., John Smith):");
+    if (!repName || !repName.trim()) return;
+
+    const companyName = prompt("Enter Company/Client Name (e.g., CORAM):");
+    if (!companyName || !companyName.trim()) return;
+
+    saveCustomContact(repName.trim(), companyName.trim().toUpperCase());
+    refreshContactUI();
+    document.getElementById('af_person_input').value = repName.trim();
+    alert(`Added ${repName.trim()} (${companyName.trim().toUpperCase()}) to contacts list!`);
+  };
 
   // Render Presets
   const listContainer = document.getElementById('af_presets_list');
@@ -211,7 +244,7 @@
     renderPresets(e.target.value);
   });
 
-  // Add Custom Preset
+  // Add Custom Preset Note
   document.getElementById('af_add_btn').onclick = () => {
     const newNote = prompt("Enter new preset note:");
     if (newNote && newNote.trim()) {
@@ -222,7 +255,7 @@
     }
   };
 
-  // Dynamic Builder (Omits Company Name completely from output text)
+  // Dynamic Builder Action
   document.getElementById('af_build_btn').onclick = () => {
     const action = document.getElementById('af_action_select').value;
     const person = document.getElementById('af_person_input').value.trim();
