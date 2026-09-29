@@ -33,7 +33,7 @@
     return `${mm}/${dd}/${yyyy}`;
   }
 
-  // Manage presets in localStorage so all items can be deleted or edited
+  // Manage presets in localStorage
   function getStoredPresets() {
     try {
       const stored = localStorage.getItem('af_preset_list_v2');
@@ -97,7 +97,7 @@
   modal.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.7);z-index:9999999;display:flex;align-items:center;justify-content:center;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;';
 
   const box = document.createElement('div');
-  box.style.cssText = 'background:#1e2329;padding:20px;border-radius:10px;box-shadow:0 8px 32px rgba(0,0,0,0.5);width:450px;max-height:85vh;display:flex;flex-direction:column;color:#f1f3f5;border:1px solid #2d333b;';
+  box.style.cssText = 'background:#1e2329;padding:20px;border-radius:10px;box-shadow:0 8px 32px rgba(0,0,0,0.5);width:470px;max-height:85vh;display:flex;flex-direction:column;color:#f1f3f5;border:1px solid #2d333b;';
 
   box.innerHTML = `
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
@@ -195,6 +195,20 @@
 
   const listContainer = document.getElementById('af_presets_list');
 
+  function movePreset(index, direction) {
+    const list = getStoredPresets();
+    const targetIndex = index + direction;
+
+    if (targetIndex < 0 || targetIndex >= list.length) return;
+
+    const temp = list[index];
+    list[index] = list[targetIndex];
+    list[targetIndex] = temp;
+
+    saveStoredPresets(list);
+    renderPresets(document.getElementById('af_search').value);
+  }
+
   function renderPresets(filter = "") {
     listContainer.innerHTML = "";
     const today = getTodayFormatted();
@@ -205,10 +219,26 @@
       if (filter && !displayFormatted.toLowerCase().includes(filter.toLowerCase())) return;
 
       const row = document.createElement('div');
-      row.style.cssText = 'display:flex;align-items:center;gap:6px;background:#232830;border:1px solid #30363d;border-radius:5px;padding:4px 8px;';
+      row.style.cssText = 'display:flex;align-items:center;gap:4px;background:#232830;border:1px solid #30363d;border-radius:5px;padding:4px 8px;';
+
+      // Move Up Button
+      const upBtn = document.createElement('button');
+      upBtn.textContent = '⬆️';
+      upBtn.title = 'Move Up';
+      upBtn.style.cssText = 'background:none;border:none;cursor:pointer;font-size:11px;padding:2px;opacity:' + (index === 0 ? '0.2' : '0.8') + ';';
+      upBtn.disabled = index === 0 || filter !== "";
+      upBtn.onclick = (e) => { e.stopPropagation(); movePreset(index, -1); };
+
+      // Move Down Button
+      const downBtn = document.createElement('button');
+      downBtn.textContent = '⬇️';
+      downBtn.title = 'Move Down';
+      downBtn.style.cssText = 'background:none;border:none;cursor:pointer;font-size:11px;padding:2px;opacity:' + (index === presets.length - 1 ? '0.2' : '0.8') + ';';
+      downBtn.disabled = index === presets.length - 1 || filter !== "";
+      downBtn.onclick = (e) => { e.stopPropagation(); movePreset(index, 1); };
 
       const textBtn = document.createElement('button');
-      textBtn.style.cssText = 'flex:1;text-align:left;background:none;border:none;color:#e6edf3;cursor:pointer;font-size:12px;line-height:1.4;padding:5px 0;';
+      textBtn.style.cssText = 'flex:1;text-align:left;background:none;border:none;color:#e6edf3;cursor:pointer;font-size:12px;line-height:1.4;padding:5px 0;margin:0 4px;';
       textBtn.textContent = displayFormatted;
       textBtn.onclick = () => {
         applyTextToDOM(displayFormatted);
@@ -244,6 +274,8 @@
         }
       };
 
+      row.appendChild(upBtn);
+      row.appendChild(downBtn);
       row.appendChild(textBtn);
       row.appendChild(editBtn);
       row.appendChild(delBtn);
@@ -268,7 +300,7 @@
   };
 
   document.getElementById('af_reset_btn').onclick = () => {
-    if (confirm("Reset all presets back to original defaults? Any customized edits or deletions will be reset.")) {
+    if (confirm("Reset all presets back to original defaults? Any customized edits, reordering, or deletions will be reset.")) {
       saveStoredPresets(initialDefaults);
       renderPresets(document.getElementById('af_search').value);
     }
