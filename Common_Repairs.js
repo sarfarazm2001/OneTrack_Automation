@@ -17,15 +17,19 @@
     "Failed High Down Occlusion",
     "Failed Up Occlusion",
     "Failed Volume Test",
+    "BT2 reading:",
+    "BT3 reading:",
     "SYSTEM TIMEOUT!"
   ];
 
-  // Map phrases that require unit values
+  // Map phrases that require unit values and custom placeholding
   const numericPhrasesConfig = {
     "Failed Volume Test": { unit: "mL", placeholder: "e.g. 9.632" },
     "Failed Low Down Occlusion": { unit: "psi", placeholder: "e.g. 10.5" },
     "Failed High Down Occlusion": { unit: "psi", placeholder: "e.g. 18.2" },
-    "Failed Up Occlusion": { unit: "psi", placeholder: "e.g. -8.53" }
+    "Failed Up Occlusion": { unit: "psi", placeholder: "e.g. -8.53" },
+    "BT2 reading:": { unit: "vdc", placeholder: "e.g. 0.480" },
+    "BT3 reading:": { unit: "vdc", placeholder: "e.g. 0.480" }
   };
 
   // Storage Handlers
@@ -125,7 +129,7 @@
 
   const listContainer = document.getElementById('cr_presets_list');
   const countBadge = document.getElementById('cr_selected_count');
-  let selectedMap = new Map(); // Stores base phrase -> formatted value
+  let selectedMap = new Map();
   let draggedItemIndex = null;
 
   function updateSelectedCount() {
@@ -137,7 +141,6 @@
     const presets = getStoredPresets();
 
     presets.forEach((rawText, index) => {
-      // Standardize trailing dot if present in legacy defaults
       const pText = rawText.replace(/\.$/, '').trim();
 
       if (filter && !pText.toLowerCase().includes(filter.toLowerCase())) return;
@@ -150,7 +153,7 @@
       const isNumeric = !!numericPhrasesConfig[pText];
       const config = numericPhrasesConfig[pText] || {};
 
-      // Checkbox for Multi-select
+      // Checkbox
       const checkbox = document.createElement('input');
       checkbox.type = 'checkbox';
       checkbox.checked = selectedMap.has(pText);
@@ -162,12 +165,12 @@
       dragHandle.title = 'Drag to reorder';
       dragHandle.style.cssText = 'color:#6e7681;font-size:14px;cursor:grab;padding-right:2px;';
 
-      // Text Click Action
+      // Text Display
       const textBtn = document.createElement('button');
       textBtn.style.cssText = 'flex:1;text-align:left;background:none;border:none;color:#e6edf3;cursor:pointer;font-size:12px;line-height:1.4;padding:5px 0;';
       textBtn.textContent = pText;
 
-      // Optional Numeric Input container
+      // Numeric Input field
       let inputEl = null;
       if (isNumeric) {
         inputEl = document.createElement('input');
@@ -179,7 +182,12 @@
           const val = inputEl.value.trim();
           let finalPhrase = pText;
           if (val) {
-            finalPhrase = `${pText} (${val} ${config.unit})`;
+            // Handle colon formatting gracefully for reading fields
+            if (pText.endsWith(':')) {
+              finalPhrase = `${pText} ${val} ${config.unit}`;
+            } else {
+              finalPhrase = `${pText} (${val} ${config.unit})`;
+            }
           }
           selectedMap.set(pText, finalPhrase);
           checkbox.checked = true;
@@ -198,7 +206,9 @@
         e.stopPropagation();
         if (checkbox.checked) {
           if (isNumeric && inputEl && inputEl.value.trim()) {
-            selectedMap.set(pText, `${pText} (${inputEl.value.trim()} ${config.unit})`);
+            const val = inputEl.value.trim();
+            const formatted = pText.endsWith(':') ? `${pText} ${val} ${config.unit}` : `${pText} (${val} ${config.unit})`;
+            selectedMap.set(pText, formatted);
           } else {
             selectedMap.set(pText, pText);
           }
@@ -211,7 +221,8 @@
       textBtn.onclick = () => {
         let textToUse = pText;
         if (isNumeric && inputEl && inputEl.value.trim()) {
-          textToUse = `${pText} (${inputEl.value.trim()} ${config.unit})`;
+          const val = inputEl.value.trim();
+          textToUse = pText.endsWith(':') ? `${pText} ${val} ${config.unit}` : `${pText} (${val} ${config.unit})`;
         }
 
         if (selectedMap.size > 0 && !selectedMap.has(pText)) {
@@ -261,7 +272,7 @@
         }
       };
 
-      // Drag and Drop Handlers
+      // Drag and Drop
       row.ondragstart = (e) => {
         draggedItemIndex = index;
         e.dataTransfer.effectAllowed = 'move';
