@@ -12,8 +12,21 @@
     "Will not power on unless connected to a charger",
     "Will not power on even when connected to a charger",
     "Strong smoke smell",
-    "Some kind of ink stain on rubber case"
+    "Some kind of ink stain on rubber case",
+    "Failed Low Down Occlusion",
+    "Failed High Down Occlusion",
+    "Failed Up Occlusion",
+    "Failed Volume Test",
+    "SYSTEM TIMEOUT!"
   ];
+
+  // Map phrases that require unit values
+  const numericPhrasesConfig = {
+    "Failed Volume Test": { unit: "mL", placeholder: "e.g. 9.632" },
+    "Failed Low Down Occlusion": { unit: "psi", placeholder: "e.g. 10.5" },
+    "Failed High Down Occlusion": { unit: "psi", placeholder: "e.g. 18.2" },
+    "Failed Up Occlusion": { unit: "psi", placeholder: "e.g. -8.53" }
+  };
 
   // Storage Handlers
   function getStoredPresets() {
@@ -76,7 +89,7 @@
   modal.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.7);z-index:9999999;display:flex;align-items:center;justify-content:center;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;';
 
   const box = document.createElement('div');
-  box.style.cssText = 'background:#1e2329;padding:20px;border-radius:10px;box-shadow:0 8px 32px rgba(0,0,0,0.5);width:460px;max-height:85vh;display:flex;flex-direction:column;color:#f1f3f5;border:1px solid #2d333b;';
+  box.style.cssText = 'background:#1e2329;padding:20px;border-radius:10px;box-shadow:0 8px 32px rgba(0,0,0,0.5);width:480px;max-height:85vh;display:flex;flex-direction:column;color:#f1f3f5;border:1px solid #2d333b;';
 
   box.innerHTML = `
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
@@ -112,18 +125,21 @@
 
   const listContainer = document.getElementById('cr_presets_list');
   const countBadge = document.getElementById('cr_selected_count');
-  let selectedPhrases = new Set();
+  let selectedMap = new Map(); // Stores base phrase -> formatted value
   let draggedItemIndex = null;
 
   function updateSelectedCount() {
-    countBadge.textContent = selectedPhrases.size;
+    countBadge.textContent = selectedMap.size;
   }
 
   function renderPresets(filter = "") {
     listContainer.innerHTML = "";
     const presets = getStoredPresets();
 
-    presets.forEach((pText, index) => {
+    presets.forEach((rawText, index) => {
+      // Standardize trailing dot if present in legacy defaults
+      const pText = rawText.replace(/\.$/, '').trim();
+
       if (filter && !pText.toLowerCase().includes(filter.toLowerCase())) return;
 
       const row = document.createElement('div');
@@ -131,20 +147,14 @@
       row.dataset.index = index;
       row.style.cssText = 'display:flex;align-items:center;gap:6px;background:#232830;border:1px solid #30363d;border-radius:5px;padding:4px 8px;cursor:grab;user-select:none;transition:background 0.2s, border-color 0.2s;';
 
+      const isNumeric = !!numericPhrasesConfig[pText];
+      const config = numericPhrasesConfig[pText] || {};
+
       // Checkbox for Multi-select
       const checkbox = document.createElement('input');
       checkbox.type = 'checkbox';
-      checkbox.checked = selectedPhrases.has(pText);
+      checkbox.checked = selectedMap.has(pText);
       checkbox.style.cssText = 'cursor:pointer;margin:0 2px;';
-      checkbox.onclick = (e) => {
-        e.stopPropagation();
-        if (checkbox.checked) {
-          selectedPhrases.add(pText);
-        } else {
-          selectedPhrases.delete(pText);
-        }
-        updateSelectedCount();
-      };
 
       // Drag Handle
       const dragHandle = document.createElement('span');
@@ -156,12 +166,59 @@
       const textBtn = document.createElement('button');
       textBtn.style.cssText = 'flex:1;text-align:left;background:none;border:none;color:#e6edf3;cursor:pointer;font-size:12px;line-height:1.4;padding:5px 0;';
       textBtn.textContent = pText;
-      textBtn.onclick = () => {
-        // Direct click inserts singular text or formats if checkboxes were toggled
-        if (selectedPhrases.size > 0 && !selectedPhrases.has(pText)) {
-          selectedPhrases.add(pText);
+
+      // Optional Numeric Input container
+      let inputEl = null;
+      if (isNumeric) {
+        inputEl = document.createElement('input');
+        inputEl.type = 'text';
+        inputEl.placeholder = config.placeholder;
+        inputEl.style.cssText = 'width:85px;padding:3px 6px;background:#1e2329;color:#58a6ff;border:1px solid #363d4a;border-radius:4px;font-size:11px;box-sizing:border-box;margin-left:auto;';
+
+        const updateNumericValue = () => {
+          const val = inputEl.value.trim();
+          let finalPhrase = pText;
+          if (val) {
+            finalPhrase = `${pText} (${val} ${config.unit})`;
+          }
+          selectedMap.set(pText, finalPhrase);
+          checkbox.checked = true;
+          updateSelectedCount();
+        };
+
+        inputEl.oninput = (e) => {
+          e.stopPropagation();
+          updateNumericValue();
+        };
+
+        inputEl.onclick = (e) => e.stopPropagation();
+      }
+
+      checkbox.onclick = (e) => {
+        e.stopPropagation();
+        if (checkbox.checked) {
+          if (isNumeric && inputEl && inputEl.value.trim()) {
+            selectedMap.set(pText, `${pText} (${inputEl.value.trim()} ${config.unit})`);
+          } else {
+            selectedMap.set(pText, pText);
+          }
+        } else {
+          selectedMap.delete(pText);
         }
-        const phrasesToInsert = selectedPhrases.size > 0 ? Array.from(selectedPhrases) : [pText];
+        updateSelectedCount();
+      };
+
+      textBtn.onclick = () => {
+        let textToUse = pText;
+        if (isNumeric && inputEl && inputEl.value.trim()) {
+          textToUse = `${pText} (${inputEl.value.trim()} ${config.unit})`;
+        }
+
+        if (selectedMap.size > 0 && !selectedMap.has(pText)) {
+          selectedMap.set(pText, textToUse);
+        }
+
+        const phrasesToInsert = selectedMap.size > 0 ? Array.from(selectedMap.values()) : [textToUse];
         applyTextToDOM(formatSelectedPhrases(phrasesToInsert));
         modal.remove();
       };
@@ -178,9 +235,10 @@
           const list = getStoredPresets();
           list[index] = updated.trim();
           saveStoredPresets(list);
-          if (selectedPhrases.has(pText)) {
-            selectedPhrases.delete(pText);
-            selectedPhrases.add(updated.trim());
+          if (selectedMap.has(pText)) {
+            const val = selectedMap.get(pText);
+            selectedMap.delete(pText);
+            selectedMap.set(updated.trim(), val.replace(pText, updated.trim()));
           }
           renderPresets(document.getElementById('cr_search').value);
         }
@@ -196,7 +254,7 @@
         if (confirm(`Delete this phrase?\n\n"${pText}"`)) {
           const list = getStoredPresets();
           list.splice(index, 1);
-          selectedPhrases.delete(pText);
+          selectedMap.delete(pText);
           saveStoredPresets(list);
           updateSelectedCount();
           renderPresets(document.getElementById('cr_search').value);
@@ -248,6 +306,7 @@
       row.appendChild(checkbox);
       row.appendChild(dragHandle);
       row.appendChild(textBtn);
+      if (inputEl) row.appendChild(inputEl);
       row.appendChild(editBtn);
       row.appendChild(delBtn);
       listContainer.appendChild(row);
@@ -258,12 +317,11 @@
 
   // Multi-Insert Action
   document.getElementById('cr_insert_selected_btn').onclick = () => {
-    if (selectedPhrases.size === 0) {
+    if (selectedMap.size === 0) {
       alert("Please select at least one phrase using the checkboxes.");
       return;
     }
-    const combinedText = formatSelectedPhrases(Array.from(selectedPhrases));
-    applyTextToDOM(combinedText);
+    applyTextToDOM(formatSelectedPhrases(Array.from(selectedMap.values())));
     modal.remove();
   };
 
@@ -284,7 +342,7 @@
 
   document.getElementById('cr_reset_btn').onclick = () => {
     if (confirm("Reset all common repair phrases to original defaults? Custom edits and order will be reset.")) {
-      selectedPhrases.clear();
+      selectedMap.clear();
       updateSelectedCount();
       saveStoredPresets(initialDefaults);
       renderPresets(document.getElementById('cr_search').value);
