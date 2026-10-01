@@ -7,11 +7,13 @@
     "Cracked door clasp",
     "Broken door clasp",
     "Broken door hinges",
+    "Cracks on the top of the cassette bay",
     "Protruded threaded insert",
     "Slightly protruded threaded insert",
     "Will not power on unless connected to a charger",
     "Will not power on even when connected to a charger",
     "Strong smoke smell",
+    "Marker stain on the door",
     "Some kind of ink stain on rubber case",
     "Failed Low Down Occlusion",
     "Failed High Down Occlusion",
@@ -20,11 +22,12 @@
     "BT2 reading:",
     "BT3 reading:",
     "Error Code:",
-    "SYSTEM TIMEOUT!"
+    "SYSTEM TIMEOUT!",
+    "Standby Light failure"
   ];
 
   // Map phrases that require unit values and custom placeholding
-  const numericPhrasesConfig = {
+  const initialNumericConfig = {
     "Failed Volume Test": { unit: "mL", placeholder: "e.g. 9.632" },
     "Failed Low Down Occlusion": { unit: "psi", placeholder: "e.g. 10.5" },
     "Failed High Down Occlusion": { unit: "psi", placeholder: "e.g. 18.2" },
@@ -34,7 +37,7 @@
     "Error Code:": { unit: "", placeholder: "e.g. 102" }
   };
 
-  // Storage Handlers
+  // Storage Handlers for Presets
   function getStoredPresets() {
     try {
       const stored = localStorage.getItem('cr_preset_list_v1');
@@ -48,6 +51,20 @@
     localStorage.setItem('cr_preset_list_v1', JSON.stringify(list));
   }
 
+  // Storage Handlers for Numeric Configurations
+  function getNumericConfigs() {
+    try {
+      const stored = localStorage.getItem('cr_numeric_config_v1');
+      if (stored) return JSON.parse(stored);
+    } catch(e) {}
+    localStorage.setItem('cr_numeric_config_v1', JSON.stringify(initialNumericConfig));
+    return initialNumericConfig;
+  }
+
+  function saveNumericConfigs(config) {
+    localStorage.setItem('cr_numeric_config_v1', JSON.stringify(config));
+  }
+
   // Format array into grammatically correct sentence
   function formatSelectedPhrases(phrases) {
     if (phrases.length === 0) return "";
@@ -56,10 +73,18 @@
     return phrases.slice(0, -1).join(", ") + ", and " + phrases[phrases.length - 1] + ".";
   }
 
-  // Target Injection - Supports both Description & Actual Findings
+  // Target Injection & Automatic Clipboard Copy
   function applyTextToDOM(text) {
     if (!text) return;
 
+    // 1. Copy to Clipboard automatically
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).catch(err => {
+        console.warn("Clipboard copy failed: ", err);
+      });
+    }
+
+    // 2. Inject into target input/textarea field
     let targetEl = document.getElementById('Description') ||
                    document.querySelector('textarea[name="Description"]') ||
                    document.getElementById('findingsTextArea') || 
@@ -79,9 +104,6 @@
       targetEl.dispatchEvent(new Event('input', { bubbles: true }));
       targetEl.dispatchEvent(new Event('change', { bubbles: true }));
       targetEl.focus();
-    } else if (navigator.clipboard) {
-      navigator.clipboard.writeText(text);
-      alert("Copied to clipboard: " + text);
     }
   }
 
@@ -141,6 +163,7 @@
   function renderPresets(filter = "") {
     listContainer.innerHTML = "";
     const presets = getStoredPresets();
+    const numericConfigs = getNumericConfigs();
 
     presets.forEach((rawText, index) => {
       const pText = rawText.replace(/\.$/, '').trim();
@@ -152,8 +175,8 @@
       row.dataset.index = index;
       row.style.cssText = 'display:flex;align-items:center;gap:6px;background:#232830;border:1px solid #30363d;border-radius:5px;padding:4px 8px;cursor:grab;user-select:none;transition:background 0.2s, border-color 0.2s;';
 
-      const isNumeric = !!numericPhrasesConfig[pText];
-      const config = numericPhrasesConfig[pText] || {};
+      const isNumeric = !!numericConfigs[pText];
+      const config = numericConfigs[pText] || {};
 
       // Checkbox
       const checkbox = document.createElement('input');
@@ -177,7 +200,7 @@
       if (isNumeric) {
         inputEl = document.createElement('input');
         inputEl.type = 'text';
-        inputEl.placeholder = config.placeholder;
+        inputEl.placeholder = config.placeholder || "value";
         inputEl.style.cssText = 'width:85px;padding:3px 6px;background:#1e2329;color:#58a6ff;border:1px solid #363d4a;border-radius:4px;font-size:11px;box-sizing:border-box;margin-left:auto;';
 
         const updateNumericValue = () => {
@@ -248,8 +271,17 @@
         const updated = prompt("Edit common repair phrase:", pText);
         if (updated !== null && updated.trim() !== "") {
           const list = getStoredPresets();
+          const configs = getNumericConfigs();
+          
+          if (configs[pText]) {
+            configs[updated.trim()] = configs[pText];
+            delete configs[pText];
+            saveNumericConfigs(configs);
+          }
+
           list[index] = updated.trim();
           saveStoredPresets(list);
+
           if (selectedMap.has(pText)) {
             const val = selectedMap.get(pText);
             selectedMap.delete(pText);
@@ -268,9 +300,14 @@
         e.stopPropagation();
         if (confirm(`Delete this phrase?\n\n"${pText}"`)) {
           const list = getStoredPresets();
+          const configs = getNumericConfigs();
+
           list.splice(index, 1);
+          delete configs[pText];
           selectedMap.delete(pText);
+
           saveStoredPresets(list);
+          saveNumericConfigs(configs);
           updateSelectedCount();
           renderPresets(document.getElementById('cr_search').value);
         }
@@ -348,9 +385,22 @@
   document.getElementById('cr_add_btn').onclick = () => {
     const newNote = prompt("Enter new common repair phrase:");
     if (newNote && newNote.trim()) {
+      const phrase = newNote.trim();
       const list = getStoredPresets();
-      list.push(newNote.trim());
+      list.push(phrase);
       saveStoredPresets(list);
+
+      // Prompt to configure as numeric input field
+      const needsNumber = confirm(`Does "${phrase}" require a numeric input field?`);
+      if (needsNumber) {
+        const unit = prompt("Enter measurement unit (leave empty if none, e.g., psi, mL, vdc):", "") || "";
+        const placeholder = prompt("Enter placeholder text:", "e.g. 100") || "value";
+        
+        const configs = getNumericConfigs();
+        configs[phrase] = { unit: unit.trim(), placeholder: placeholder.trim() };
+        saveNumericConfigs(configs);
+      }
+
       renderPresets(document.getElementById('cr_search').value);
     }
   };
@@ -360,6 +410,7 @@
       selectedMap.clear();
       updateSelectedCount();
       saveStoredPresets(initialDefaults);
+      saveNumericConfigs(initialNumericConfig);
       renderPresets(document.getElementById('cr_search').value);
     }
   };
