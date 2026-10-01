@@ -19,6 +19,7 @@
     "Failed Volume Test",
     "BT2 reading:",
     "BT3 reading:",
+    "Error Code:",
     "SYSTEM TIMEOUT!"
   ];
 
@@ -29,7 +30,8 @@
     "Failed High Down Occlusion": { unit: "psi", placeholder: "e.g. 18.2" },
     "Failed Up Occlusion": { unit: "psi", placeholder: "e.g. -8.53" },
     "BT2 reading:": { unit: "vdc", placeholder: "e.g. 0.480" },
-    "BT3 reading:": { unit: "vdc", placeholder: "e.g. 0.480" }
+    "BT3 reading:": { unit: "vdc", placeholder: "e.g. 0.480" },
+    "Error Code:": { unit: "", placeholder: "e.g. 102" }
   };
 
   // Storage Handlers
@@ -182,11 +184,11 @@
           const val = inputEl.value.trim();
           let finalPhrase = pText;
           if (val) {
-            // Handle colon formatting gracefully for reading fields
+            const unitSuffix = config.unit ? ` ${config.unit}` : '';
             if (pText.endsWith(':')) {
-              finalPhrase = `${pText} ${val} ${config.unit}`;
+              finalPhrase = `${pText} ${val}${unitSuffix}`;
             } else {
-              finalPhrase = `${pText} (${val} ${config.unit})`;
+              finalPhrase = `${pText} (${val}${unitSuffix})`;
             }
           }
           selectedMap.set(pText, finalPhrase);
@@ -207,7 +209,8 @@
         if (checkbox.checked) {
           if (isNumeric && inputEl && inputEl.value.trim()) {
             const val = inputEl.value.trim();
-            const formatted = pText.endsWith(':') ? `${pText} ${val} ${config.unit}` : `${pText} (${val} ${config.unit})`;
+            const unitSuffix = config.unit ? ` ${config.unit}` : '';
+            const formatted = pText.endsWith(':') ? `${pText} ${val}${unitSuffix}` : `${pText} (${val}${unitSuffix})`;
             selectedMap.set(pText, formatted);
           } else {
             selectedMap.set(pText, pText);
@@ -222,7 +225,8 @@
         let textToUse = pText;
         if (isNumeric && inputEl && inputEl.value.trim()) {
           const val = inputEl.value.trim();
-          textToUse = pText.endsWith(':') ? `${pText} ${val} ${config.unit}` : `${pText} (${val} ${config.unit})`;
+          const unitSuffix = config.unit ? ` ${config.unit}` : '';
+          textToUse = pText.endsWith(':') ? `${pText} ${val}${unitSuffix}` : `${pText} (${val}${unitSuffix})`;
         }
 
         if (selectedMap.size > 0 && !selectedMap.has(pText)) {
