@@ -1,5 +1,5 @@
 (function () {
-  const highlightParts = [
+  const initialHighlightParts = [
     { name: "Back Case Over mold (New)", pn: "F31927" },
     { name: "BATTERY DOOR,JOEY", pn: "F31929" },
     { name: "Battery (Covidien) Li-Ion", pn: "F010506" },
@@ -12,10 +12,10 @@
     { name: "Overlay (New)", pn: "1051140" },
     { name: "RICHO HARNESS CLIP", pn: "F080757" },
     { name: "ROTOR ASSEMBLY", pn: "F31934" },
-    { name: "ULTRASONIC ASSEMBLY", pn: "F31941" },
-  ].sort((a, b) => a.name.localeCompare(b.name));
+    { name: "ULTRASONIC ASSEMBLY", pn: "F31941" }
+  ];
 
-  const standardParts = [
+  const initialStandardParts = [
     { name: "3/16 E-STYLE RETAINING CLIP", pn: "F132239" },
     { name: "ALUMINUM SPACER", pn: "F31984" },
     { name: "Back Case Over mold (New)", pn: "F31927" },
@@ -62,56 +62,41 @@
     { name: "SHOULDER BOLT CAP SEAL,JOEY", pn: "F31937" },
     { name: "Shoulder Bolt #4,7/16", pn: "F132223" },
     { name: "ULTRASONIC ASSEMBLY", pn: "F31941" },
-    { name: "WASHER SEAL,JOEY", pn: "F31983" },
+    { name: "WASHER SEAL,JOEY", pn: "F31983" }
   ];
 
-  const seen = new Set(highlightParts.map((p) => p.name));
-  const unhighlighted = standardParts.filter((p) => !seen.has(p.name)).sort((a, b) => a.name.localeCompare(b.name));
+  function getStoredData() {
+    try {
+      const storedH = localStorage.getItem("joey_inhouse_highlights_v1");
+      const storedS = localStorage.getItem("joey_inhouse_standards_v1");
+      if (storedH && storedS) {
+        return { highlightParts: JSON.parse(storedH), standardParts: JSON.parse(storedS) };
+      }
+    } catch (e) {}
+    localStorage.setItem("joey_inhouse_highlights_v1", JSON.stringify(initialHighlightParts));
+    localStorage.setItem("joey_inhouse_standards_v1", JSON.stringify(initialStandardParts));
+    return { highlightParts: initialHighlightParts, standardParts: initialStandardParts };
+  }
 
-  let overlay = document.createElement("div");
-  overlay.style.cssText = "position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:99999;display:flex;align-items:center;justify-content:center;font-family:sans-serif;";
+  function saveData(hData, sData) {
+    localStorage.setItem("joey_inhouse_highlights_v1", JSON.stringify(hData));
+    localStorage.setItem("joey_inhouse_standards_v1", JSON.stringify(sData));
+  }
 
-  let box = document.createElement("div");
-  box.style.cssText = "background:#fff;padding:20px;border-radius:8px;box-shadow:0 4px 10px rgba(0,0,0,0.3);width:450px;text-align:left;color:#333;";
-
-  let html = `<h3 style="margin-top:0;margin-bottom:12px;font-size:16px;text-align:center;color:#222;">Joey IN HOUSE Findings Generator</h3><div style="max-height:300px;overflow-y:auto;margin-bottom:15px;">`;
-
-  highlightParts.forEach((p) => {
-    html += `<label style="display:flex;align-items:center;justify-content:space-between;padding:4px 6px;font-size:12px;cursor:pointer;border-bottom:1px solid #f0f0f0;background:#fffde7;"><span style="display:flex;align-items:center;margin-right:10px;"><input type="checkbox" class="j_chk" value="${p.name}" style="margin-right:8px;transform:scale(1.1);flex-shrink:0;"><span style="font-weight:bold;color:#333;">${p.name}</span></span><span style="color:#666;font-family:monospace;white-space:nowrap;">${p.pn}</span></label>`;
-  });
-
-  unhighlighted.forEach((p) => {
-    html += `<label style="display:flex;align-items:center;justify-content:space-between;padding:4px 6px;font-size:12px;cursor:pointer;border-bottom:1px solid #f0f0f0;"><span style="display:flex;align-items:center;margin-right:10px;"><input type="checkbox" class="j_chk" value="${p.name}" style="margin-right:8px;transform:scale(1.1);flex-shrink:0;">${p.name}</span><span style="color:#666;font-family:monospace;white-space:nowrap;">${p.pn}</span></label>`;
-  });
-
-  html += `</div><div style="display:flex;gap:8px;"><button id="j_back" style="flex:1;padding:10px;background:#6c757d;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:13px;font-weight:bold;">← Back</button><button id="j_copy" style="flex:1.2;padding:10px;background:#28a745;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:13px;font-weight:bold;">Apply</button><button id="j_cancel" style="flex:1;padding:10px;background:#dc3545;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:13px;font-weight:bold;">Cancel</button></div>`;
-
-  box.innerHTML = html;
-  overlay.appendChild(box);
-  document.body.appendChild(overlay);
-
-  document.getElementById("j_cancel").onclick = () => document.body.removeChild(overlay);
-  document.getElementById("j_back").onclick = () => {
-    document.body.removeChild(overlay);
-    if (window.reopenOEMLauncher) window.reopenOEMLauncher();
-  };
-
-  document.getElementById("j_copy").onclick = () => {
-    let selectedParts = Array.from(box.querySelectorAll(".j_chk:checked")).map((cb) => cb.value);
-    let partsText = selectedParts.length ? selectedParts.join(", ") : "None";
-    let text = `Parts replaced are as follows:\n${partsText}.`;
-
-    // Auto-Copy to Clipboard
+  function applyTextToDOM(text) {
     if (navigator.clipboard && navigator.clipboard.writeText) {
       navigator.clipboard.writeText(text).catch((err) => console.warn("Clipboard copy failed:", err));
     }
 
-    document.body.removeChild(overlay);
+    let target = document.querySelector("#addActualFindingsModal textarea") ||
+                 document.getElementById("note") ||
+                 document.querySelector('textarea[name="Notes"]') ||
+                 document.querySelector('textarea[name="Finding"]') ||
+                 document.querySelector("textarea");
 
-    let target = document.querySelector("#addActualFindingsModal textarea") || document.getElementById("note") || document.querySelector('textarea[name="Notes"]') || document.querySelector("textarea");
     if (target) {
       target.focus();
-      let setter = Object.getOwnPropertyDescriptor(window.HTMLTextAreaElement.prototype, "value").set;
+      let setter = Object.getOwnPropertyDescriptor(window.HTMLTextAreaElement.prototype, "value")?.set;
       if (setter) setter.call(target, text); else target.value = text;
       target.dispatchEvent(new Event("input", { bubbles: true }));
       target.dispatchEvent(new Event("change", { bubbles: true }));
@@ -119,5 +104,204 @@
     } else {
       alert("Textarea not found. Findings copied to clipboard!");
     }
+  }
+
+  const existing = document.getElementById("joey-inhouse-modal");
+  if (existing) existing.remove();
+
+  const overlay = document.createElement("div");
+  overlay.id = "joey-inhouse-modal";
+  overlay.style.cssText = "position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.7);z-index:9999999;display:flex;align-items:center;justify-content:center;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;";
+
+  const box = document.createElement("div");
+  box.style.cssText = "background:#1e2329;padding:20px;border-radius:10px;box-shadow:0 8px 32px rgba(0,0,0,0.5);width:450px;max-height:85vh;display:flex;flex-direction:column;color:#f1f3f5;border:1px solid #2d333b;";
+
+  box.innerHTML = `
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+      <h3 style="margin:0;font-size:16px;font-weight:700;color:#fff;">Joey IN HOUSE Findings Generator</h3>
+      <span id="j_close_x" style="cursor:pointer;font-size:20px;color:#8b949e;line-height:1;">&times;</span>
+    </div>
+
+    <!-- Search & Add Bar -->
+    <div style="display:flex;gap:6px;margin-bottom:10px;">
+      <input type="text" id="j_search" placeholder="🔍 Search parts..." style="flex:1;padding:8px;background:#1e2329;color:#fff;border:1px solid #363d4a;border-radius:4px;font-size:12px;box-sizing:border-box;">
+      <button id="j_add_btn" style="padding:8px 12px;background:#238636;color:#fff;border:none;border-radius:4px;cursor:pointer;font-weight:600;font-size:12px;white-space:nowrap;">➕ Add Part</button>
+    </div>
+
+    <!-- Parts List -->
+    <div id="j_parts_list" style="overflow-y:auto;flex:1;display:flex;flex-direction:column;gap:6px;padding-right:4px;"></div>
+
+    <!-- File Import/Export Bar -->
+    <div style="display:flex;gap:6px;margin-top:10px;padding-top:10px;border-top:1px solid #2d333b;">
+      <button id="j_export_btn" style="flex:1;padding:7px;background:#316dca;color:#fff;border:none;border-radius:4px;cursor:pointer;font-weight:600;font-size:11px;">📤 Export Source (.js)</button>
+      <button id="j_import_btn" style="flex:1;padding:7px;background:#6e40c9;color:#fff;border:none;border-radius:4px;cursor:pointer;font-weight:600;font-size:11px;">📥 Import Parts File</button>
+      <input type="file" id="j_import_file_input" accept=".js,.json" style="display:none;">
+    </div>
+
+    <!-- Footer Controls -->
+    <div style="display:flex;gap:8px;margin-top:12px;">
+      <button id="j_reset_btn" title="Reset to defaults" style="padding:8px 12px;background:#484f58;color:#fff;border:none;border-radius:4px;cursor:pointer;font-weight:600;font-size:12px;">↺ Reset</button>
+      <button id="j_back" style="flex:1;padding:8px;background:#363d4a;color:#fff;border:none;border-radius:4px;cursor:pointer;font-weight:600;font-size:12px;">← Back</button>
+      <button id="j_copy" style="flex:1.2;padding:8px;background:#238636;color:#fff;border:none;border-radius:4px;cursor:pointer;font-weight:600;font-size:12px;">Apply</button>
+      <button id="j_cancel" style="flex:1;padding:8px;background:#da3633;color:#fff;border:none;border-radius:4px;cursor:pointer;font-weight:600;font-size:12px;">Cancel</button>
+    </div>
+  `;
+
+  overlay.appendChild(box);
+  document.body.appendChild(overlay);
+
+  const listContainer = document.getElementById("j_parts_list");
+
+  function renderParts(filter = "") {
+    listContainer.innerHTML = "";
+    const { highlightParts, standardParts } = getStoredData();
+
+    const sortedHighlights = [...highlightParts].sort((a, b) => a.name.localeCompare(b.name));
+    const seen = new Set(sortedHighlights.map((p) => p.name));
+    const unhighlighted = standardParts.filter((p) => !seen.has(p.name)).sort((a, b) => a.name.localeCompare(b.name));
+
+    const createRow = (p, isHighlight) => {
+      if (filter && !p.name.toLowerCase().includes(filter.toLowerCase()) && !p.pn.toLowerCase().includes(filter.toLowerCase())) return null;
+
+      const row = document.createElement("div");
+      row.style.cssText = isHighlight
+        ? "display:flex;align-items:center;justify-content:space-between;background:#382d12;border:1px solid #845306;border-radius:5px;padding:6px 8px;font-weight:bold;"
+        : "display:flex;align-items:center;justify-content:space-between;background:#232830;border:1px solid #30363d;border-radius:5px;padding:6px 8px;";
+
+      const leftGroup = document.createElement("span");
+      leftGroup.style.cssText = "display:flex;align-items:center;gap:8px;font-size:12px;color:#e6edf3;";
+
+      const checkbox = document.createElement("input");
+      checkbox.type = "checkbox";
+      checkbox.className = "j_chk";
+      checkbox.value = p.name;
+      checkbox.style.cssText = "transform:scale(1.1);cursor:pointer;";
+
+      const labelText = document.createElement("span");
+      labelText.textContent = p.name;
+
+      leftGroup.appendChild(checkbox);
+      leftGroup.appendChild(labelText);
+
+      const rightGroup = document.createElement("span");
+      rightGroup.style.cssText = "color:#8b949e;font-family:monospace;font-size:11px;";
+      rightGroup.textContent = p.pn;
+
+      row.appendChild(leftGroup);
+      row.appendChild(rightGroup);
+      return row;
+    };
+
+    sortedHighlights.forEach((p) => {
+      const row = createRow(p, true);
+      if (row) listContainer.appendChild(row);
+    });
+
+    unhighlighted.forEach((p) => {
+      const row = createRow(p, false);
+      if (row) listContainer.appendChild(row);
+    });
+  }
+
+  renderParts();
+
+  document.getElementById("j_search").addEventListener("input", (e) => {
+    renderParts(e.target.value);
+  });
+
+  document.getElementById("j_copy").onclick = () => {
+    let selectedParts = Array.from(box.querySelectorAll(".j_chk:checked")).map((cb) => cb.value);
+    let partsText = selectedParts.length ? selectedParts.join(", ") : "None";
+    let text = `Parts replaced are as follows:\n${partsText}.`;
+
+    applyTextToDOM(text);
+    overlay.remove();
+  };
+
+  document.getElementById("j_add_btn").onclick = () => {
+    const name = prompt("Enter Part Name:");
+    if (!name) return;
+    const pn = prompt("Enter Part Number (or N/A):") || "N/A";
+    const isHigh = confirm("Should this part be highlighted in yellow?");
+
+    const { highlightParts, standardParts } = getStoredData();
+    const newPart = { name: name.trim(), pn: pn.trim() };
+
+    if (isHigh) highlightParts.push(newPart);
+    standardParts.push(newPart);
+
+    saveData(highlightParts, standardParts);
+    renderParts(document.getElementById("j_search").value);
+  };
+
+  document.getElementById("j_reset_btn").onclick = () => {
+    if (confirm("Reset all parts back to initial defaults?")) {
+      saveData(initialHighlightParts, initialStandardParts);
+      renderParts(document.getElementById("j_search").value);
+    }
+  };
+
+  // 📤 EXPORT HANDLER
+  document.getElementById("j_export_btn").onclick = () => {
+    const { highlightParts, standardParts } = getStoredData();
+    let scriptContent = arguments.callee.toString();
+    scriptContent = `(${scriptContent})();`;
+    scriptContent = scriptContent.replace(/const initialHighlightParts = \[\s[\s\S]*?\];/, `const initialHighlightParts = ${JSON.stringify(highlightParts, null, 2)};`);
+    scriptContent = scriptContent.replace(/const initialStandardParts = \[\s[\s\S]*?\];/, `const initialStandardParts = ${JSON.stringify(standardParts, null, 2)};`);
+
+    const blob = new Blob([scriptContent], { type: "application/javascript;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = "Joey_InHouse_Generator.js";
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
+  // 📥 IMPORT HANDLER
+  const fileInput = document.getElementById("j_import_file_input");
+  document.getElementById("j_import_btn").onclick = () => fileInput.click();
+
+  fileInput.onchange = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      try {
+        const text = event.target.result;
+        const hMatch = text.match(/const initialHighlightParts = (\[[\s\S]*?\]);/);
+        const sMatch = text.match(/const initialStandardParts = (\[[\s\S]*?\]);/);
+
+        if (hMatch && sMatch) {
+          saveData(JSON.parse(hMatch[1]), JSON.parse(sMatch[1]));
+          renderParts(document.getElementById("j_search").value);
+          alert("Successfully imported parts from JS script!");
+        } else {
+          const parsed = JSON.parse(text);
+          if (parsed.highlightParts && parsed.standardParts) {
+            saveData(parsed.highlightParts, parsed.standardParts);
+            renderParts(document.getElementById("j_search").value);
+            alert("Successfully imported parts!");
+          } else throw new Error("Invalid structure");
+        }
+      } catch (err) {
+        alert("Failed to parse file. Upload a valid .js or .json configuration.");
+      }
+    };
+    reader.readAsText(file);
+    fileInput.value = "";
+  };
+
+  const close = () => overlay.remove();
+  document.getElementById("j_close_x").onclick = close;
+  document.getElementById("j_cancel").onclick = close;
+  overlay.onclick = (e) => { if (e.target === overlay) close(); };
+
+  document.getElementById("j_back").onclick = () => {
+    close();
+    if (typeof window.reopenOEMLauncher === "function") window.reopenOEMLauncher();
   };
 })();
