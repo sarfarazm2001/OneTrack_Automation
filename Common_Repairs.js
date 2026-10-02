@@ -121,7 +121,7 @@
 
   box.innerHTML = `
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
-      <h3 style="margin:0;font-size:16px;font-weight:700;color:#fff;">🛠️ Common Repairs / Descriptions</h3>
+      <h3 style="margin:0;font-size:16px;font-weight:700;color:#fff;">🛠️️ Common Repairs / Descriptions</h3>
       <span id="cr_close_x" style="cursor:pointer;font-size:20px;color:#8b949e;line-height:1;">&times;</span>
     </div>
 
@@ -139,6 +139,13 @@
 
     <!-- Presets List -->
     <div id="cr_presets_list" style="overflow-y:auto;flex:1;display:flex;flex-direction:column;gap:6px;padding-right:4px;"></div>
+
+    <!-- File Import/Export Bar -->
+    <div style="display:flex;gap:6px;margin-top:10px;padding-top:10px;border-top:1px solid #2d333b;">
+      <button id="cr_export_btn" style="flex:1;padding:7px;background:#316dca;color:#fff;border:none;border-radius:4px;cursor:pointer;font-weight:600;font-size:11px;">📤 Export Source (.js)</button>
+      <button id="cr_import_btn" style="flex:1;padding:7px;background:#6e40c9;color:#fff;border:none;border-radius:4px;cursor:pointer;font-weight:600;font-size:11px;">📥 Import Preset File</button>
+      <input type="file" id="cr_import_file_input" accept=".js,.json" style="display:none;">
+    </div>
 
     <!-- Footer Controls -->
     <div style="display:flex;gap:8px;margin-top:12px;">
@@ -413,6 +420,71 @@
       saveNumericConfigs(initialNumericConfig);
       renderPresets(document.getElementById('cr_search').value);
     }
+  };
+
+  // 📤 EXPORT HANDLER
+  document.getElementById('cr_export_btn').onclick = () => {
+    const currentList = getStoredPresets();
+    const currentConfigs = getNumericConfigs();
+
+    let scriptContent = arguments.callee.toString();
+    scriptContent = `(${scriptContent})();`;
+    scriptContent = scriptContent.replace(/const initialDefaults = \[\s[\s\S]*?\];/, `const initialDefaults = ${JSON.stringify(currentList, null, 2)};`);
+    scriptContent = scriptContent.replace(/const initialNumericConfig = \{\s[\s\S]*?\};/, `const initialNumericConfig = ${JSON.stringify(currentConfigs, null, 2)};`);
+
+    const blob = new Blob([scriptContent], { type: "application/javascript;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = "Common_Repairs.js";
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
+  // 📥 IMPORT HANDLER
+  const fileInput = document.getElementById('cr_import_file_input');
+  document.getElementById('cr_import_btn').onclick = () => fileInput.click();
+
+  fileInput.onchange = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      try {
+        const text = event.target.result;
+        let importedDefaults = [];
+        let importedConfigs = {};
+
+        const arrayMatch = text.match(/const initialDefaults = (\[[\s\S]*?\]);/);
+        const configMatch = text.match(/const initialNumericConfig = (\{[\s\S]*?\});/);
+
+        if (arrayMatch) {
+          importedDefaults = JSON.parse(arrayMatch[1]);
+          if (configMatch) importedConfigs = JSON.parse(configMatch[1]);
+        } else {
+          importedDefaults = JSON.parse(text);
+        }
+
+        if (Array.isArray(importedDefaults) && importedDefaults.length > 0) {
+          saveStoredPresets(importedDefaults);
+          if (Object.keys(importedConfigs).length > 0) saveNumericConfigs(importedConfigs);
+          
+          selectedMap.clear();
+          updateSelectedCount();
+          renderPresets(document.getElementById('cr_search').value);
+          alert(`Successfully imported ${importedDefaults.length} common repair phrases!`);
+        } else {
+          throw new Error("Invalid format");
+        }
+      } catch (err) {
+        alert("Failed to parse imported file. Please upload a valid .js or .json preset file.");
+      }
+    };
+    reader.readAsText(file);
+    fileInput.value = "";
   };
 
   const close = () => modal.remove();
