@@ -1,4 +1,4 @@
-(function(){
+javascript:(function(){
   const DEFAULT_DATA={"INFINITY":["N/A"],"OMNI":["8A"],"SOLIS":["45TR","80TR"],"JOEY":["45TR"],"CURLIN":["8TR","77TR","148TR","134TR","6J"],"FREEDOM":["45TR","8A"]};
   const SOFTWARE_VERSIONS={"CURLIN":{title:"Select Software for CURLIN",searchStr:"confirm software",versions:["2.04 - F5 - B0","2.04 - F6 - B1","2.04 - F6 - B2","2.05 - F5 - B0","2.05 - F6 - B1","2.05 - F6 - B2","2.05 - F6 - B3"]},"SOLIS":{title:"Select Software for SOLIS",searchStr:"latest software",versions:["0106","0106(M)"]}};
 
@@ -30,10 +30,90 @@
     let overlay=document.createElement('div');
     overlay.style.cssText='position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:99999;display:flex;align-items:center;justify-content:center;font-family:sans-serif;';
     let box=document.createElement('div');
-    box.style.cssText='background:#fff;padding:20px;border-radius:8px;box-shadow:0 4px 10px rgba(0,0,0,0.3);width:360px;text-align:center;color:#333;';
-    box.innerHTML=`<h3 style="margin-top:0;margin-bottom:8px;font-size:16px;color:#222;">Add / Edit TE Config</h3><p style="font-size:11px;color:#666;margin-bottom:10px;">Enter DEVICE: TE1, TE2 (one per line) or paste JSON:</p><textarea id="cfg_txt" style="width:90%;height:150px;font-family:monospace;font-size:12px;padding:6px;margin-bottom:10px;">${toTextFormat(initialData)}</textarea><div style="display:flex;gap:10px;"><button id="cfg_save" style="flex:1;padding:10px;background:#28a745;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:13px;font-weight:bold;">Save & Continue</button><button id="cfg_cancel" style="flex:1;padding:10px;background:#dc3545;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:13px;font-weight:bold;">Cancel</button></div>`;
+    box.style.cssText='background:#fff;padding:20px;border-radius:8px;box-shadow:0 4px 10px rgba(0,0,0,0.3);width:380px;text-align:center;color:#333;';
+    
+    box.innerHTML=`
+      <h3 style="margin-top:0;margin-bottom:8px;font-size:16px;color:#222;">Add / Edit TE Config</h3>
+      <p style="font-size:11px;color:#666;margin-bottom:10px;">Enter DEVICE: TE1, TE2 (one per line) or paste JSON:</p>
+      <textarea id="cfg_txt" style="width:90%;height:140px;font-family:monospace;font-size:12px;padding:6px;margin-bottom:10px;">${toTextFormat(initialData)}</textarea>
+      
+      <!-- Import / Export Controls -->
+      <div style="display:flex;gap:6px;margin-bottom:12px;">
+        <input type="file" id="te_import_file" accept=".js,.json,.txt" style="display:none;">
+        <button id="te_import_btn" style="flex:1;padding:6px;background:#17a2b8;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:11px;font-weight:bold;">📥 Import File</button>
+        <button id="te_export_btn" style="flex:1;padding:6px;background:#6f42c1;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:11px;font-weight:bold;">📤 Export Source (.js)</button>
+      </div>
+
+      <div style="display:flex;gap:10px;">
+        <button id="cfg_save" style="flex:1;padding:10px;background:#28a745;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:13px;font-weight:bold;">Save & Continue</button>
+        <button id="cfg_cancel" style="flex:1;padding:10px;background:#dc3545;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:13px;font-weight:bold;">Cancel</button>
+      </div>
+    `;
+
     overlay.appendChild(box);
     document.body.appendChild(overlay);
+
+    // Import Event Handlers
+    document.getElementById('te_import_btn').onclick=()=>{ document.getElementById('te_import_file').click(); };
+    document.getElementById('te_import_file').onchange=(e)=>{
+      let file=e.target.files[0];
+      if(!file)return;
+      let reader=new FileReader();
+      reader.onload=(evt)=>{
+        let content=evt.target.result;
+        try{
+          let parsed;
+          if(content.includes('DEFAULT_DATA')){
+            let match=content.match(/DEFAULT_DATA\s*=\s*(\{[\s\S]*?\});/);
+            if(match) parsed=JSON.parse(match[1]);
+          } else {
+            parsed=parseInputFormat(content);
+          }
+          if(parsed && Object.keys(parsed).length){
+            document.getElementById('cfg_txt').value=toTextFormat(parsed);
+            alert("TE Config successfully imported!");
+          } else {
+            alert("Import failed: File contains no valid config.");
+          }
+        }catch(err){ alert("Error reading file: "+err.message); }
+      };
+      reader.readAsText(file);
+    };
+
+    // Export Event Handler
+    document.getElementById('te_export_btn').onclick=()=>{
+      try{
+        let currentConfig=parseInputFormat(document.getElementById('cfg_txt').value);
+        let currentScript=arguments.callee.caller ? arguments.callee.caller.toString() : "";
+        
+        // If caller function string is unavailable, rebuild standard wrapper
+        let scriptSource = (arguments.callee && arguments.callee.toString().length > 100) 
+          ? arguments.callee.toString() 
+          : window.te_modal_script_source || "";
+
+        if(!scriptSource){
+          alert("Exporting source script directly...");
+        }
+
+        let updatedConfigJson=JSON.stringify(currentConfig, null, 2);
+        let updatedScriptSource=scriptSource.replace(
+          /const\s+DEFAULT_DATA\s*=\s*\{[\s\S]*?\};/,
+          `const DEFAULT_DATA = ${updatedConfigJson};`
+        );
+
+        let fullSource=updatedScriptSource.startsWith("javascript:") ? updatedScriptSource : `javascript:(${updatedScriptSource})();`;
+        let blob=new Blob([fullSource], {type:"application/javascript"});
+        let url=URL.createObjectURL(blob);
+        let a=document.createElement("a");
+        a.href=url;
+        a.download="TE_Device_Modal_Updated.js";
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+      }catch(err){ alert("Export failed: "+err.message); }
+    };
+
     document.getElementById('cfg_cancel').onclick=()=>{document.body.removeChild(overlay);};
     document.getElementById('cfg_save').onclick=()=>{
       try{
@@ -140,7 +220,6 @@
     });
     box.appendChild(container);
 
-    // ONLY show Calibrated Set Weight if device is strictly CURLIN
     const isCurlin = String(deviceKey).toUpperCase() === 'CURLIN';
     if(isCurlin){
       let customDiv=document.createElement('div');
@@ -198,7 +277,6 @@
   }
 
   function applyTE(teStr){
-    // Auto-Copy TE text to Clipboard
     if (navigator.clipboard && navigator.clipboard.writeText) {
       navigator.clipboard.writeText(teStr).catch((err) => console.warn("Clipboard copy failed:", err));
     }
