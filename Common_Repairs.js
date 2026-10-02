@@ -121,7 +121,7 @@
 
   box.innerHTML = `
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
-      <h3 style="margin:0;font-size:16px;font-weight:700;color:#fff;">🛠️️ Common Repairs / Descriptions</h3>
+      <h3 style="margin:0;font-size:16px;font-weight:700;color:#fff;">🛠 Common Repairs / Descriptions</h3>
       <span id="cr_close_x" style="cursor:pointer;font-size:20px;color:#8b949e;line-height:1;">&times;</span>
     </div>
 
@@ -365,7 +365,7 @@
       row.appendChild(checkbox);
       row.appendChild(dragHandle);
       row.appendChild(textBtn);
-      if (inputEl) row.appendChild(inputEl);
+      if (isNumeric && inputEl) row.appendChild(inputEl);
       row.appendChild(editBtn);
       row.appendChild(delBtn);
       listContainer.appendChild(row);
@@ -374,50 +374,36 @@
 
   renderPresets();
 
-  // Multi-Insert Action
-  document.getElementById('cr_insert_selected_btn').onclick = () => {
-    if (selectedMap.size === 0) {
-      alert("Please select at least one phrase using the checkboxes.");
-      return;
-    }
-    applyTextToDOM(formatSelectedPhrases(Array.from(selectedMap.values())));
-    modal.remove();
-  };
-
-  // Search & Add
   document.getElementById('cr_search').addEventListener('input', (e) => {
     renderPresets(e.target.value);
   });
 
+  document.getElementById('cr_insert_selected_btn').onclick = () => {
+    if (selectedMap.size === 0) {
+      alert("Please select at least one item to insert.");
+      return;
+    }
+    const phrasesToInsert = Array.from(selectedMap.values());
+    applyTextToDOM(formatSelectedPhrases(phrasesToInsert));
+    modal.remove();
+  };
+
   document.getElementById('cr_add_btn').onclick = () => {
-    const newNote = prompt("Enter new common repair phrase:");
-    if (newNote && newNote.trim()) {
-      const phrase = newNote.trim();
+    const newPhrase = prompt("Enter new common repair phrase:");
+    if (newPhrase && newPhrase.trim()) {
       const list = getStoredPresets();
-      list.push(phrase);
+      list.push(newPhrase.trim());
       saveStoredPresets(list);
-
-      // Prompt to configure as numeric input field
-      const needsNumber = confirm(`Does "${phrase}" require a numeric input field?`);
-      if (needsNumber) {
-        const unit = prompt("Enter measurement unit (leave empty if none, e.g., psi, mL, vdc):", "") || "";
-        const placeholder = prompt("Enter placeholder text:", "e.g. 100") || "value";
-        
-        const configs = getNumericConfigs();
-        configs[phrase] = { unit: unit.trim(), placeholder: placeholder.trim() };
-        saveNumericConfigs(configs);
-      }
-
       renderPresets(document.getElementById('cr_search').value);
     }
   };
 
   document.getElementById('cr_reset_btn').onclick = () => {
-    if (confirm("Reset all common repair phrases to original defaults? Custom edits and order will be reset.")) {
-      selectedMap.clear();
-      updateSelectedCount();
+    if (confirm("Reset all common repairs back to original defaults? Any customized edits, reordering, or deletions will be reset.")) {
       saveStoredPresets(initialDefaults);
       saveNumericConfigs(initialNumericConfig);
+      selectedMap.clear();
+      updateSelectedCount();
       renderPresets(document.getElementById('cr_search').value);
     }
   };
@@ -426,7 +412,7 @@
   document.getElementById('cr_export_btn').onclick = () => {
     const currentList = getStoredPresets();
     const currentConfigs = getNumericConfigs();
-
+    
     let scriptContent = arguments.callee.toString();
     scriptContent = `(${scriptContent})();`;
     scriptContent = scriptContent.replace(/const initialDefaults = \[\s[\s\S]*?\];/, `const initialDefaults = ${JSON.stringify(currentList, null, 2)};`);
@@ -456,7 +442,7 @@
       try {
         const text = event.target.result;
         let importedDefaults = [];
-        let importedConfigs = {};
+        let importedConfigs = null;
 
         const arrayMatch = text.match(/const initialDefaults = (\[[\s\S]*?\]);/);
         const configMatch = text.match(/const initialNumericConfig = (\{[\s\S]*?\});/);
@@ -470,12 +456,11 @@
 
         if (Array.isArray(importedDefaults) && importedDefaults.length > 0) {
           saveStoredPresets(importedDefaults);
-          if (Object.keys(importedConfigs).length > 0) saveNumericConfigs(importedConfigs);
-          
+          if (importedConfigs) saveNumericConfigs(importedConfigs);
           selectedMap.clear();
           updateSelectedCount();
           renderPresets(document.getElementById('cr_search').value);
-          alert(`Successfully imported ${importedDefaults.length} common repair phrases!`);
+          alert(`Successfully imported ${importedDefaults.length} presets!`);
         } else {
           throw new Error("Invalid format");
         }
