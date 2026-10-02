@@ -1,4 +1,4 @@
-(function () {
+(function runJoeyInHouse() {
   const initialHighlightParts = [
     { name: "Back Case Over mold (New)", pn: "F31927" },
     { name: "BATTERY DOOR,JOEY", pn: "F31929" },
@@ -244,10 +244,10 @@
   // 📤 EXPORT HANDLER
   document.getElementById("j_export_btn").onclick = () => {
     const { highlightParts, standardParts } = getStoredData();
-    let scriptContent = arguments.callee.toString();
+    let scriptContent = runJoeyInHouse.toString();
     scriptContent = `(${scriptContent})();`;
-    scriptContent = scriptContent.replace(/const initialHighlightParts = \[\s[\s\S]*?\];/, `const initialHighlightParts = ${JSON.stringify(highlightParts, null, 2)};`);
-    scriptContent = scriptContent.replace(/const initialStandardParts = \[\s[\s\S]*?\];/, `const initialStandardParts = ${JSON.stringify(standardParts, null, 2)};`);
+    scriptContent = scriptContent.replace(/const initialHighlightParts = \[[^]*?\];/, `const initialHighlightParts = ${JSON.stringify(highlightParts, null, 2)};`);
+    scriptContent = scriptContent.replace(/const initialStandardParts = \[[^]*?\];/, `const initialStandardParts = ${JSON.stringify(standardParts, null, 2)};`);
 
     const blob = new Blob([scriptContent], { type: "application/javascript;charset=utf-8" });
     const url = URL.createObjectURL(blob);
