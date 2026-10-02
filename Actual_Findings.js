@@ -358,7 +358,6 @@
     const currentList = getStoredPresets();
     const formattedDefaults = JSON.stringify(currentList, null, 2);
     
-    // Substitute defaults in file output
     let scriptContent = arguments.callee.toString();
     scriptContent = `(${scriptContent})();`;
     scriptContent = scriptContent.replace(/const initialDefaults = \[\s[\s\S]*?\];/, `const initialDefaults = ${formattedDefaults};`);
