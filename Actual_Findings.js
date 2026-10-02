@@ -62,9 +62,14 @@
     return text.replace(/\s*\([^)]*\)/g, '').trim();
   }
 
-  // DOM Injection
+  // DOM Injection & Clipboard Copy
   function applyTextToDOM(rawText) {
     const text = cleanBracketContent(rawText);
+
+    // Auto-copy to Clipboard
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).catch(err => console.warn("Clipboard copy failed:", err));
+    }
 
     let targetEl = document.getElementById('findingsTextArea') || 
                    document.querySelector('textarea[name="Finding"]') || 
@@ -83,9 +88,6 @@
       targetEl.dispatchEvent(new Event('input', { bubbles: true }));
       targetEl.dispatchEvent(new Event('change', { bubbles: true }));
       targetEl.focus();
-    } else if (navigator.clipboard) {
-      navigator.clipboard.writeText(text);
-      alert("Copied to clipboard: " + text);
     }
   }
 
@@ -136,8 +138,15 @@
     <!-- Presets List -->
     <div id="af_presets_list" style="overflow-y:auto;flex:1;display:flex;flex-direction:column;gap:6px;padding-right:4px;"></div>
 
+    <!-- File Import/Export Bar -->
+    <div style="display:flex;gap:6px;margin-top:10px;padding-top:10px;border-top:1px solid #2d333b;">
+      <button id="af_export_btn" style="flex:1;padding:7px;background:#316dca;color:#fff;border:none;border-radius:4px;cursor:pointer;font-weight:600;font-size:11px;">📤 Export Source (.js)</button>
+      <button id="af_import_btn" style="flex:1;padding:7px;background:#6e40c9;color:#fff;border:none;border-radius:4px;cursor:pointer;font-weight:600;font-size:11px;">📥 Import Preset File</button>
+      <input type="file" id="af_import_file_input" accept=".js,.json" style="display:none;">
+    </div>
+
     <!-- Footer Controls -->
-    <div style="display:flex;gap:8px;margin-top:12px;">
+    <div style="display:flex;gap:8px;margin-top:10px;">
       <button id="af_reset_btn" title="Reset presets to default list" style="padding:8px 12px;background:#484f58;color:#fff;border:none;border-radius:4px;cursor:pointer;font-weight:600;font-size:12px;">↺ Reset Defaults</button>
       <button id="af_back_btn" style="flex:1;padding:8px;background:#363d4a;color:#fff;border:none;border-radius:4px;cursor:pointer;font-weight:600;font-size:12px;">← Back</button>
       <button id="af_cancel_btn" style="flex:1;padding:8px;background:#da3633;color:#fff;border:none;border-radius:4px;cursor:pointer;font-weight:600;font-size:12px;">Cancel</button>
@@ -206,11 +215,10 @@
       if (filter && !displayFormatted.toLowerCase().includes(filter.toLowerCase())) return;
 
       const row = document.createElement('div');
-      row.draggable = filter === ""; // Disable drag during active filtering
+      row.draggable = filter === "";
       row.dataset.index = index;
       row.style.cssText = 'display:flex;align-items:center;gap:6px;background:#232830;border:1px solid #30363d;border-radius:5px;padding:4px 8px;cursor:grab;user-select:none;transition:background 0.2s, border-color 0.2s;';
 
-      // Drag Handle
       const dragHandle = document.createElement('span');
       dragHandle.textContent = '⋮⋮';
       dragHandle.title = 'Drag to reorder';
@@ -253,7 +261,6 @@
         }
       };
 
-      // Drag and Drop Event Listeners
       row.ondragstart = (e) => {
         draggedItemIndex = index;
         e.dataTransfer.effectAllowed = 'move';
@@ -344,6 +351,59 @@
 
     applyTextToDOM(resultNote);
     modal.remove();
+  };
+
+  // 📤 EXPORT HANDLER
+  document.getElementById('af_export_btn').onclick = () => {
+    const currentList = getStoredPresets();
+    const formattedDefaults = JSON.stringify(currentList, null, 2);
+    
+    // Substitute defaults in file output
+    let scriptContent = arguments.callee.toString();
+    scriptContent = `(${scriptContent})();`;
+    scriptContent = scriptContent.replace(/const initialDefaults = \[\s[\s\S]*?\];/, `const initialDefaults = ${formattedDefaults};`);
+
+    const blob = new Blob([scriptContent], { type: "application/javascript;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = "Actual_Findings.js";
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
+  // 📥 IMPORT HANDLER
+  const fileInput = document.getElementById('af_import_file_input');
+  document.getElementById('af_import_btn').onclick = () => fileInput.click();
+
+  fileInput.onchange = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      try {
+        const text = event.target.result;
+        let importedDefaults = [];
+
+        const arrayMatch = text.match(/const initialDefaults = (\[[\s\S]*?\]);/);
+        importedDefaults = arrayMatch ? JSON.parse(arrayMatch[1]) : JSON.parse(text);
+
+        if (Array.isArray(importedDefaults) && importedDefaults.length > 0) {
+          saveStoredPresets(importedDefaults);
+          renderPresets(document.getElementById('af_search').value);
+          alert(`Successfully imported ${importedDefaults.length} presets!`);
+        } else {
+          throw new Error("Invalid format");
+        }
+      } catch (err) {
+        alert("Failed to parse imported file. Please upload a valid .js or .json preset file.");
+      }
+    };
+    reader.readAsText(file);
+    fileInput.value = "";
   };
 
   const close = () => modal.remove();
