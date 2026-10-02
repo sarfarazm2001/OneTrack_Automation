@@ -59,6 +59,11 @@
     let costText = isWarranty ? 'Parts and Labor covered under warranty' : `Parts and Labor total of $${totalCost.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
     let text = `Manufacturer findings, per Moog Medical the following will need replaced: ${partsText}${costText}`;
     
+    // Auto-Copy to Clipboard
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).catch(err => console.warn("Clipboard copy failed:", err));
+    }
+
     document.body.removeChild(overlay);
 
     let target = document.querySelector('#addActualFindingsModal textarea') || document.getElementById('note') || document.querySelector('textarea[name="Notes"]') || document.querySelector('textarea');
@@ -69,9 +74,6 @@
       target.dispatchEvent(new Event('input', { bubbles: true }));
       target.dispatchEvent(new Event('change', { bubbles: true }));
       target.dispatchEvent(new Event('blur', { bubbles: true }));
-    } else {
-      navigator.clipboard.writeText(text);
-      alert('Copied to clipboard!');
     }
   };
 })();
