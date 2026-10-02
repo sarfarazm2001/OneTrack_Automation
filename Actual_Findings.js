@@ -1,4 +1,4 @@
-(function(){
+(function runActualFindings(){
   // Correct Company-to-Rep Mapping
   const companyContacts = {
     "AmeriMed": ["David Rolph"],
@@ -353,14 +353,14 @@
     modal.remove();
   };
 
-  // 📤 EXPORT HANDLER
+  // 📤 EXPORT HANDLER (Fixed to reference outer function by name)
   document.getElementById('af_export_btn').onclick = () => {
     const currentList = getStoredPresets();
     const formattedDefaults = JSON.stringify(currentList, null, 2);
     
-    let scriptContent = arguments.callee.toString();
+    let scriptContent = runActualFindings.toString();
     scriptContent = `(${scriptContent})();`;
-    scriptContent = scriptContent.replace(/const initialDefaults = \[\s[\s\S]*?\];/, `const initialDefaults = ${formattedDefaults};`);
+    scriptContent = scriptContent.replace(/const initialDefaults = \[[^]*?\];/, `const initialDefaults = ${formattedDefaults};`);
 
     const blob = new Blob([scriptContent], { type: "application/javascript;charset=utf-8" });
     const url = URL.createObjectURL(blob);
