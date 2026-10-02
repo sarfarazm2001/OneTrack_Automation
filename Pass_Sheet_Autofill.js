@@ -198,6 +198,11 @@
   }
 
   function applyTE(teStr){
+    // Auto-Copy TE text to Clipboard
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(teStr).catch((err) => console.warn("Clipboard copy failed:", err));
+    }
+
     let notesField=document.getElementById('note')||document.querySelector('textarea[name="Notes"]');
     if(notesField)setElementValue(notesField,teStr);
   }
