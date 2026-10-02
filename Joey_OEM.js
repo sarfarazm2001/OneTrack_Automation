@@ -61,6 +61,12 @@
     let selectedParts = Array.from(box.querySelectorAll(".j_chk:checked")).map((cb) => cb.value);
     let partsText = selectedParts.length ? selectedParts.join(", ") : "";
     let text = `Per the OEM, the following parts have been replaced: ${partsText} and passed the related testing. The OEM also certified that the device passed the following: Buzzer Test, LED Test, Battery Test, MISTIC Test, and Audio Test.`;
+
+    // Auto-Copy to Clipboard
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).catch((err) => console.warn("Clipboard copy failed:", err));
+    }
+
     document.body.removeChild(overlay);
 
     let target = document.querySelector("#addActualFindingsModal textarea") || document.getElementById("note") || document.querySelector('textarea[name="Notes"]') || document.querySelector("textarea");
@@ -72,8 +78,7 @@
       target.dispatchEvent(new Event("change", { bubbles: true }));
       target.dispatchEvent(new Event("blur", { bubbles: true }));
     } else {
-      navigator.clipboard.writeText(text);
-      alert("Copied to clipboard!");
+      alert("Textarea not found. Findings copied to clipboard!");
     }
   };
 })();
