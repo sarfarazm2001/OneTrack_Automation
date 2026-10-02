@@ -1,4 +1,4 @@
-(function(){
+(function runCurlinCalc(){
   const initialParts = [
     { name: "Under Warranty", pn: "N/A", isWarranty: true },
     { name: "IV Labor", pn: "N/A", isEval: true, price: 23.75 },
@@ -183,12 +183,12 @@
     }
   };
 
-  // 📤 EXPORT HANDLER
+  // 📤 EXPORT HANDLER (Fixed to reference outer function by name)
   document.getElementById('curlin_export_btn').onclick = () => {
     const currentParts = getStoredParts();
-    let scriptContent = arguments.callee.toString();
+    let scriptContent = runCurlinCalc.toString();
     scriptContent = `(${scriptContent})();`;
-    scriptContent = scriptContent.replace(/const initialParts = \[\s[\s\S]*?\];/, `const initialParts = ${JSON.stringify(currentParts, null, 2)};`);
+    scriptContent = scriptContent.replace(/const initialParts = \[[^]*?\];/, `const initialParts = ${JSON.stringify(currentParts, null, 2)};`);
 
     const blob = new Blob([scriptContent], { type: "application/javascript;charset=utf-8" });
     const url = URL.createObjectURL(blob);
