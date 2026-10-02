@@ -1,5 +1,5 @@
 (function () {
-  const parts = [
+  let parts = [
     { name: "Hub Service Labor Rate (ONLY SELECT WHEN NOTHING ELSE IS REPLACED BY OEM)", pn: "LABOR" },
     { name: "ADHESIVE, PSA, PIEZO RING, CADD-SOLIS 1/EA", pn: "30-3285" },
     { name: "AIR DETECTOR, SOLIS", pn: "70-0446" },
@@ -86,15 +86,35 @@
   overlay.style.cssText = "position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:99999;display:flex;align-items:center;justify-content:center;font-family:sans-serif;";
 
   let box = document.createElement("div");
-  box.style.cssText = "background:#fff;padding:20px;border-radius:8px;box-shadow:0 4px 10px rgba(0,0,0,0.3);width:550px;text-align:left;color:#333;";
+  box.style.cssText = "background:#fff;padding:20px;border-radius:8px;box-shadow:0 4px 10px rgba(0,0,0,0.3);width:580px;text-align:left;color:#333;";
 
-  let html = `<h3 style="margin-top:0;margin-bottom:12px;font-size:16px;text-align:center;color:#222;">Solis Findings Generator</h3><div style="display:flex;gap:6px;margin-bottom:10px;"><input type="text" id="s_custom_desc" placeholder="Part Description" style="flex:2;padding:6px 8px;border:1px solid #ccc;border-radius:4px;font-size:12px;"><input type="text" id="s_custom_pn" placeholder="Part #" style="flex:1;padding:6px 8px;border:1px solid #ccc;border-radius:4px;font-size:12px;"><button id="s_add_btn" style="padding:6px 12px;background:#007bff;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:12px;font-weight:bold;">+ Add</button></div><div id="s_parts_list" style="max-height:240px;overflow-y:auto;margin-bottom:12px;">`;
+  let html = `
+    <h3 style="margin-top:0;margin-bottom:12px;font-size:16px;text-align:center;color:#222;">Solis Findings Generator</h3>
+    
+    <!-- IO Toolbar -->
+    <div style="display:flex;gap:8px;margin-bottom:12px;background:#f8f9fa;padding:8px;border-radius:6px;border:1px solid #e9ecef;">
+      <button id="s_export_btn" style="flex:1;padding:6px 10px;background:#17a2b8;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:11px;font-weight:bold;">📤 Export Source (.js)</button>
+      <button id="s_import_btn" style="flex:1;padding:6px 10px;background:#6f42c1;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:11px;font-weight:bold;">📥 Import Parts File</button>
+      <input type="file" id="s_file_input" accept=".js,.json" style="display:none;">
+    </div>
 
-  parts.forEach((p) => {
-    html += `<div class="part_row" style="display:flex;align-items:center;justify-content:space-between;padding:4px 0;font-size:12px;border-bottom:1px solid #f0f0f0;"><label style="display:flex;align-items:center;cursor:pointer;flex:1;margin-right:10px;"><input type="checkbox" class="s_chk" data-pn="${p.pn}" value="${p.name}" style="margin-right:8px;transform:scale(1.1);flex-shrink:0;"><span class="desc_txt">${p.name}</span></label><div style="display:flex;align-items:center;gap:6px;"><span class="pn_txt" style="color:#666;font-family:monospace;white-space:nowrap;margin-right:4px;">${p.pn}</span><button class="s_edit_btn" style="padding:2px 6px;font-size:10px;background:#ffc107;color:#000;border:none;border-radius:3px;cursor:pointer;">Edit</button><button class="s_del_btn" style="padding:2px 6px;font-size:10px;background:#dc3545;color:#fff;border:none;border-radius:3px;cursor:pointer;">Delete</button></div></div>`;
-  });
+    <!-- Manual Entry Controls -->
+    <div style="display:flex;gap:6px;margin-bottom:10px;">
+      <input type="text" id="s_custom_desc" placeholder="Part Description" style="flex:2;padding:6px 8px;border:1px solid #ccc;border-radius:4px;font-size:12px;">
+      <input type="text" id="s_custom_pn" placeholder="Part #" style="flex:1;padding:6px 8px;border:1px solid #ccc;border-radius:4px;font-size:12px;">
+      <button id="s_add_btn" style="padding:6px 12px;background:#007bff;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:12px;font-weight:bold;">+ Add</button>
+    </div>
 
-  html += `</div><div style="display:flex;gap:8px;"><button id="s_back" style="flex:1;padding:10px;background:#6c757d;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:13px;font-weight:bold;">← Back</button><button id="s_copy" style="flex:1.2;padding:10px;background:#28a745;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:13px;font-weight:bold;">Apply</button><button id="s_cancel" style="flex:1;padding:10px;background:#dc3545;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:13px;font-weight:bold;">Cancel</button></div>`;
+    <!-- Parts List Container -->
+    <div id="s_parts_list" style="max-height:240px;overflow-y:auto;margin-bottom:12px;"></div>
+
+    <!-- Action Buttons -->
+    <div style="display:flex;gap:8px;">
+      <button id="s_back" style="flex:1;padding:10px;background:#6c757d;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:13px;font-weight:bold;">← Back</button>
+      <button id="s_copy" style="flex:1.2;padding:10px;background:#28a745;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:13px;font-weight:bold;">Apply</button>
+      <button id="s_cancel" style="flex:1;padding:10px;background:#dc3545;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:13px;font-weight:bold;">Cancel</button>
+    </div>
+  `;
 
   box.innerHTML = html;
   overlay.appendChild(box);
@@ -119,8 +139,104 @@
     row.querySelector(".s_del_btn").onclick = () => { row.remove(); };
   };
 
-  box.querySelectorAll(".part_row").forEach(attachRowEvents);
+  const renderPartsList = (partsData) => {
+    let listContainer = document.getElementById("s_parts_list");
+    listContainer.innerHTML = "";
+    partsData.forEach((p) => {
+      let row = document.createElement("div");
+      row.className = "part_row";
+      row.style.cssText = "display:flex;align-items:center;justify-content:space-between;padding:4px 0;font-size:12px;border-bottom:1px solid #f0f0f0;";
+      row.innerHTML = `
+        <label style="display:flex;align-items:center;cursor:pointer;flex:1;margin-right:10px;">
+          <input type="checkbox" class="s_chk" data-pn="${p.pn}" value="${p.name}" style="margin-right:8px;transform:scale(1.1);flex-shrink:0;">
+          <span class="desc_txt">${p.name}</span>
+        </label>
+        <div style="display:flex;align-items:center;gap:6px;">
+          <span class="pn_txt" style="color:#666;font-family:monospace;white-space:nowrap;margin-right:4px;">${p.pn}</span>
+          <button class="s_edit_btn" style="padding:2px 6px;font-size:10px;background:#ffc107;color:#000;border:none;border-radius:3px;cursor:pointer;">Edit</button>
+          <button class="s_del_btn" style="padding:2px 6px;font-size:10px;background:#dc3545;color:#fff;border:none;border-radius:3px;cursor:pointer;">Delete</button>
+        </div>
+      `;
+      listContainer.appendChild(row);
+      attachRowEvents(row);
+    });
+  };
 
+  // Initial List Render
+  renderPartsList(parts);
+
+  // Helper to extract current state of parts list from DOM
+  const getCurrentPartsFromDOM = () => {
+    const rows = Array.from(document.querySelectorAll("#s_parts_list .part_row"));
+    return rows.map(r => ({
+      name: r.querySelector(".desc_txt").innerText.trim(),
+      pn: r.querySelector(".pn_txt").innerText.trim()
+    }));
+  };
+
+  // 📤 Export Source (.js)
+  document.getElementById("s_export_btn").onclick = () => {
+    const currentParts = getCurrentPartsFromDOM();
+    const selfCode = arguments.callee.toString();
+    const partsJson = JSON.stringify(currentParts, null, 4);
+    
+    // Replace current default parts list with active parts list in code backup
+    const modifiedCode = `(${selfCode})()`.replace(
+      /let parts = \[[\s\S]*?\];/,
+      `let parts = ${partsJson};`
+    );
+
+    const blob = new Blob([modifiedCode], { type: "application/javascript" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "solis_findings_generator.js";
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
+  // 📥 Import Parts File (.js or .json)
+  document.getElementById("s_import_btn").onclick = () => {
+    document.getElementById("s_file_input").click();
+  };
+
+  document.getElementById("s_file_input").onchange = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      try {
+        const fileContent = event.target.result;
+        let importedParts = [];
+
+        if (file.name.endsWith(".json")) {
+          importedParts = JSON.parse(fileContent);
+        } else if (file.name.endsWith(".js")) {
+          const match = fileContent.match(/let parts = (\[[\s\S]*?\]);/);
+          if (match && match[1]) {
+            importedParts = JSON.parse(match[1]);
+          } else {
+            throw new Error("Could not parse 'parts' array from the JS file.");
+          }
+        }
+
+        if (Array.isArray(importedParts) && importedParts.length > 0) {
+          renderPartsList(importedParts);
+          alert(`Successfully imported ${importedParts.length} parts!`);
+        } else {
+          alert("Import failed: No valid parts list found.");
+        }
+      } catch (err) {
+        alert("Error reading file: " + err.message);
+      }
+    };
+    reader.readAsText(file);
+  };
+
+  // Add Part
   document.getElementById("s_add_btn").onclick = () => {
     let desc = document.getElementById("s_custom_desc").value.trim();
     let pn = document.getElementById("s_custom_pn").value.trim();
@@ -129,7 +245,17 @@
     let row = document.createElement("div");
     row.className = "part_row";
     row.style.cssText = "display:flex;align-items:center;justify-content:space-between;padding:4px 0;font-size:12px;border-bottom:1px solid #f0f0f0;background:#eef6ff;";
-    row.innerHTML = `<label style="display:flex;align-items:center;cursor:pointer;flex:1;margin-right:10px;"><input type="checkbox" class="s_chk" data-pn="${pn}" value="${desc}" checked style="margin-right:8px;transform:scale(1.1);flex-shrink:0;"><span class="desc_txt">${desc}</span></label><div style="display:flex;align-items:center;gap:6px;"><span class="pn_txt" style="color:#666;font-family:monospace;white-space:nowrap;margin-right:4px;">${pn}</span><button class="s_edit_btn" style="padding:2px 6px;font-size:10px;background:#ffc107;color:#000;border:none;border-radius:3px;cursor:pointer;">Edit</button><button class="s_del_btn" style="padding:2px 6px;font-size:10px;background:#dc3545;color:#fff;border:none;border-radius:3px;cursor:pointer;">Delete</button></div>`;
+    row.innerHTML = `
+      <label style="display:flex;align-items:center;cursor:pointer;flex:1;margin-right:10px;">
+        <input type="checkbox" class="s_chk" data-pn="${pn}" value="${desc}" checked style="margin-right:8px;transform:scale(1.1);flex-shrink:0;">
+        <span class="desc_txt">${desc}</span>
+      </label>
+      <div style="display:flex;align-items:center;gap:6px;">
+        <span class="pn_txt" style="color:#666;font-family:monospace;white-space:nowrap;margin-right:4px;">${pn}</span>
+        <button class="s_edit_btn" style="padding:2px 6px;font-size:10px;background:#ffc107;color:#000;border:none;border-radius:3px;cursor:pointer;">Edit</button>
+        <button class="s_del_btn" style="padding:2px 6px;font-size:10px;background:#dc3545;color:#fff;border:none;border-radius:3px;cursor:pointer;">Delete</button>
+      </div>
+    `;
     list.insertBefore(row, list.firstChild);
     attachRowEvents(row);
     document.getElementById("s_custom_desc").value = "";
@@ -143,6 +269,7 @@
     else if (window.reopenOEMLauncher) window.reopenOEMLauncher();
   };
 
+  // Apply Findings
   document.getElementById("s_copy").onclick = () => {
     let checkedBoxes = Array.from(box.querySelectorAll(".s_chk:checked"));
     let physicalParts = checkedBoxes.filter(cb => cb.dataset.pn !== "LABOR").map(cb => cb.value);
@@ -159,7 +286,6 @@
       text = `The OEM certifies that the device passes the following: ${testBlock}`;
     }
 
-    // Auto-Copy to Clipboard
     if (navigator.clipboard && navigator.clipboard.writeText) {
       navigator.clipboard.writeText(text).catch((err) => console.warn("Clipboard copy failed:", err));
     }
