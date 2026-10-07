@@ -11,19 +11,21 @@
   };
 
   const initialDefaults = [
-    "TE: 8TR, 77TR, 148TR, 134TR, 6J",
-    "Outdated battery and it needs to be changed. (JOEY)",
-    "Battery replaced on {DATE}. (JOEY)",
-    "This device is under warranty.",
-    "Pressure strains calibrated. (CURLIN)",
-    "No issue found. PM was successful.",
-    "No response from client. Returning unrepaired.",
-    "Software needs to be updated to 97-0625-010600-01. (SOLIS)",
-    "Software updated to 97-0625-010600-01 at McKesson. (SOLIS)",
-    "Software needs to be updated to 97-0625-010600-01(M). (SOLIS)",
-    "Software updated to 97-0625-010600-01(M) at McKesson. (SOLIS)",
-    "Completed 10 day charge cycle per OEM recommendation. Passed all functional tests without error and passed PM per manufacturer specifications."
-  ];
+  "TE: 8TR, 77TR, 148TR, 134TR, 6J",
+  "Outdated battery and it needs to be changed. (JOEY)",
+  "Battery replaced on {DATE}. (JOEY)",
+  "This device is under warranty.",
+  "Volume Calibrated. (CURLIN)",
+  "Pressure strains calibrated. (CURLIN)",
+  "Baseline Calibrated. (CURLIN)",
+  "No issue found. PM was successful.",
+  "No response from client. Returning unrepaired.",
+  "Software needs to be updated to 97-0625-010600-01. (SOLIS)",
+  "Software updated to 97-0625-010600-01 at McKesson. (SOLIS)",
+  "Software needs to be updated to 97-0625-010600-01(M). (SOLIS)",
+  "Software updated to 97-0625-010600-01(M) at McKesson. (SOLIS)",
+  "Completed 10 day charge cycle per OEM recommendation. Passed all functional tests without error and passed PM per manufacturer specifications."
+];
 
   function getTodayFormatted() {
     const d = new Date();
