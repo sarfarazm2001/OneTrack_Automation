@@ -1,5 +1,5 @@
 javascript:(function(){
-  const DEFAULT_DATA={"INFINITY":["N/A"],"OMNI":["8A"],"SOLIS":["45TR","80TR"],"JOEY":["45TR"],"CURLIN":["8TR","165TR","134TR","6J","16K"],"FREEDOM":["45TR","8A"]};
+  const DEFAULT_DATA={"INFINITY":["N/A"],"OMNI":["8A"],"SOLIS":["8A","45TR","80TR"],"JOEY":["45TR"],"CURLIN":["8TR","165TR","134TR","6J","16K"],"FREEDOM":["45TR","8A"]};
   const SOFTWARE_VERSIONS={"CURLIN":{title:"Select Software for CURLIN",searchStr:"confirm software",versions:["2.04 - F5 - B0","2.04 - F6 - B1","2.04 - F6 - B2","2.05 - F5 - B0","2.05 - F6 - B1","2.05 - F6 - B2","2.05 - F6 - B3"]},"SOLIS":{title:"Select Software for SOLIS",searchStr:"latest software",versions:["0106","0106(M)"]}};
 
   function toTextFormat(data){return Object.entries(data).map(([k,v])=>`${k}: ${v.join(', ')}`).join('\n');}
