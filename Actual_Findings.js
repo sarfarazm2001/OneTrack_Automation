@@ -4,7 +4,7 @@
     "AmeriMed": ["David Rolph"],
     "CORAM": ["Shana Brown", "Amy Kwong"],
     "CVS": ["William Maturo"],
-    "NELC": ["Alexsis Gauthier", "Sheryl Guyer", "Lauren Lynch", "Michael O'Connor", "Joshua Kronick"],
+    "NELC": ["Alexsis Gauthier", "Sheryl Guyer", "Lauren Lynch", "Michael O'Connor", "Joshua Kronick", "Nicholas McCafferty"],
     "OPTION CARE": ["Brian Fitzpatrick"],
     "OPTUM": ["Janey Mechler", "Heather LeClair"],
     "Walgreens": ["Carl Kerekes"]
