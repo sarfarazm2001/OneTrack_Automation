@@ -35,6 +35,18 @@
     localStorage.setItem('curlin_parts_list_v1', JSON.stringify(list));
   }
 
+  // 1. Frequency Storage & Recording Helpers
+  function getFreq() {
+    try { return JSON.parse(localStorage.getItem('ot_freq_curlin') || '{}'); }
+    catch(e) { return {}; }
+  }
+
+  function recordUsage(partName) {
+    let freq = getFreq();
+    freq[partName] = (freq[partName] || 0) + 1;
+    localStorage.setItem('ot_freq_curlin', JSON.stringify(freq));
+  }
+
   function applyTextToDOM(text) {
     if (navigator.clipboard && navigator.clipboard.writeText) {
       navigator.clipboard.writeText(text).catch(err => console.warn("Clipboard copy failed:", err));
@@ -105,8 +117,12 @@
   function renderParts(filter = "") {
     listContainer.innerHTML = "";
     const partsList = getStoredParts();
+    const freq = getFreq();
 
-    partsList.forEach((p, index) => {
+    // 2. Sort parts dynamically by frequency (highest/most frequent usage on top)
+    partsList.sort((a, b) => (freq[b.name] || 0) - (freq[a.name] || 0));
+
+    partsList.forEach((p) => {
       if (filter && !p.name.toLowerCase().includes(filter.toLowerCase()) && !p.pn.toLowerCase().includes(filter.toLowerCase())) return;
 
       const row = document.createElement('div');
@@ -151,6 +167,10 @@
 
   document.getElementById('curlin_apply_btn').onclick = () => {
     let checkedEls = Array.from(box.querySelectorAll('.c_chk:checked'));
+    
+    // 3. Record frequency usage for every checked part
+    checkedEls.forEach(cb => recordUsage(cb.value));
+
     let warrantyBox = box.querySelector('.c_chk[data-warranty="1"]');
     let isWarranty = warrantyBox ? warrantyBox.checked : false;
     let selectedParts = checkedEls.filter(cb => cb.getAttribute('data-eval') !== '1' && cb.getAttribute('data-warranty') !== '1').map(cb => cb.value);
@@ -183,7 +203,6 @@
     }
   };
 
-  // 📤 EXPORT HANDLER (Fixed to reference outer function by name)
   document.getElementById('curlin_export_btn').onclick = () => {
     const currentParts = getStoredParts();
     let scriptContent = runCurlinCalc.toString();
@@ -201,7 +220,6 @@
     URL.revokeObjectURL(url);
   };
 
-  // 📥 IMPORT HANDLER
   const fileInput = document.getElementById('curlin_import_file_input');
   document.getElementById('curlin_import_btn').onclick = () => fileInput.click();
 
