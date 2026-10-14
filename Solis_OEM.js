@@ -1,5 +1,5 @@
-(function () {
-  let parts = [
+(function runSolisCalc() {
+  const initialParts = [
     { name: "Hub Service Labor Rate (ONLY SELECT WHEN NOTHING ELSE IS REPLACED BY OEM)", pn: "LABOR" },
     { name: "ADHESIVE, PSA, PIEZO RING, CADD-SOLIS 1/EA", pn: "30-3285" },
     { name: "AIR DETECTOR, SOLIS", pn: "70-0446" },
@@ -82,6 +82,31 @@
     { name: "VALVE, DUAL ACTIVATION, CADD-SOLIS", pn: "30-3063" }
   ];
 
+  function getStoredParts() {
+    try {
+      const stored = localStorage.getItem("solis_parts_list_v1");
+      if (stored) return JSON.parse(stored);
+    } catch (e) {}
+    localStorage.setItem("solis_parts_list_v1", JSON.stringify(initialParts));
+    return initialParts;
+  }
+
+  function saveStoredParts(list) {
+    localStorage.setItem("solis_parts_list_v1", JSON.stringify(list));
+  }
+
+  // Frequency Storage & Recording Helpers
+  function getFreq() {
+    try { return JSON.parse(localStorage.getItem('ot_freq_solis') || '{}'); }
+    catch(e) { return {}; }
+  }
+
+  function recordUsage(partName) {
+    let freq = getFreq();
+    freq[partName] = (freq[partName] || 0) + 1;
+    localStorage.setItem('ot_freq_solis', JSON.stringify(freq));
+  }
+
   let overlay = document.createElement("div");
   overlay.style.cssText = "position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:99999;display:flex;align-items:center;justify-content:center;font-family:sans-serif;";
 
@@ -120,6 +145,14 @@
   overlay.appendChild(box);
   document.body.appendChild(overlay);
 
+  const getCurrentPartsFromDOM = () => {
+    const rows = Array.from(document.querySelectorAll("#s_parts_list .part_row"));
+    return rows.map(r => ({
+      name: r.querySelector(".desc_txt").innerText.trim(),
+      pn: r.querySelector(".pn_txt").innerText.trim()
+    }));
+  };
+
   const attachRowEvents = (row) => {
     row.querySelector(".s_edit_btn").onclick = () => {
       let newDesc = prompt("Edit Part Description:", row.querySelector(".desc_txt").innerText);
@@ -131,17 +164,26 @@
           chk.value = newDesc.trim();
           chk.dataset.pn = newPn.trim();
           row.querySelector(".pn_txt").innerText = newPn.trim();
+          saveStoredParts(getCurrentPartsFromDOM());
         } else {
           alert("Part Number cannot be blank.");
         }
       }
     };
-    row.querySelector(".s_del_btn").onclick = () => { row.remove(); };
+    row.querySelector(".s_del_btn").onclick = () => { 
+      row.remove(); 
+      saveStoredParts(getCurrentPartsFromDOM());
+    };
   };
 
   const renderPartsList = (partsData) => {
     let listContainer = document.getElementById("s_parts_list");
     listContainer.innerHTML = "";
+    
+    let freq = getFreq();
+    // Sort dynamically by frequency (most frequently used items on top)
+    partsData.sort((a, b) => (freq[b.name] || 0) - (freq[a.name] || 0));
+
     partsData.forEach((p) => {
       let row = document.createElement("div");
       row.className = "part_row";
@@ -162,28 +204,18 @@
     });
   };
 
-  // Initial List Render
-  renderPartsList(parts);
-
-  // Helper to extract current state of parts list from DOM
-  const getCurrentPartsFromDOM = () => {
-    const rows = Array.from(document.querySelectorAll("#s_parts_list .part_row"));
-    return rows.map(r => ({
-      name: r.querySelector(".desc_txt").innerText.trim(),
-      pn: r.querySelector(".pn_txt").innerText.trim()
-    }));
-  };
+  // Initial List Render from LocalStorage
+  renderPartsList(getStoredParts());
 
   // 📤 Export Source (.js)
   document.getElementById("s_export_btn").onclick = () => {
     const currentParts = getCurrentPartsFromDOM();
-    const selfCode = arguments.callee.toString();
+    const selfCode = runSolisCalc.toString();
     const partsJson = JSON.stringify(currentParts, null, 4);
     
-    // Replace current default parts list with active parts list in code backup
     const modifiedCode = `(${selfCode})()`.replace(
-      /let parts = \[[\s\S]*?\];/,
-      `let parts = ${partsJson};`
+      /let initialParts = \[[\s\S]*?\];/,
+      `let initialParts = ${partsJson};`
     );
 
     const blob = new Blob([modifiedCode], { type: "application/javascript" });
@@ -215,15 +247,16 @@
         if (file.name.endsWith(".json")) {
           importedParts = JSON.parse(fileContent);
         } else if (file.name.endsWith(".js")) {
-          const match = fileContent.match(/let parts = (\[[\s\S]*?\]);/);
+          const match = fileContent.match(/let initialParts = (\[[\s\S]*?\]);/) || fileContent.match(/let parts = (\[[\s\S]*?\]);/);
           if (match && match[1]) {
             importedParts = JSON.parse(match[1]);
           } else {
-            throw new Error("Could not parse 'parts' array from the JS file.");
+            throw new Error("Could not parse parts array from the JS file.");
           }
         }
 
         if (Array.isArray(importedParts) && importedParts.length > 0) {
+          saveStoredParts(importedParts);
           renderPartsList(importedParts);
           alert(`Successfully imported ${importedParts.length} parts!`);
         } else {
@@ -241,23 +274,12 @@
     let desc = document.getElementById("s_custom_desc").value.trim();
     let pn = document.getElementById("s_custom_pn").value.trim();
     if (!desc || !pn) { alert("Both Part Description and Part # are required."); return; }
-    let list = document.getElementById("s_parts_list");
-    let row = document.createElement("div");
-    row.className = "part_row";
-    row.style.cssText = "display:flex;align-items:center;justify-content:space-between;padding:4px 0;font-size:12px;border-bottom:1px solid #f0f0f0;background:#eef6ff;";
-    row.innerHTML = `
-      <label style="display:flex;align-items:center;cursor:pointer;flex:1;margin-right:10px;">
-        <input type="checkbox" class="s_chk" data-pn="${pn}" value="${desc}" checked style="margin-right:8px;transform:scale(1.1);flex-shrink:0;">
-        <span class="desc_txt">${desc}</span>
-      </label>
-      <div style="display:flex;align-items:center;gap:6px;">
-        <span class="pn_txt" style="color:#666;font-family:monospace;white-space:nowrap;margin-right:4px;">${pn}</span>
-        <button class="s_edit_btn" style="padding:2px 6px;font-size:10px;background:#ffc107;color:#000;border:none;border-radius:3px;cursor:pointer;">Edit</button>
-        <button class="s_del_btn" style="padding:2px 6px;font-size:10px;background:#dc3545;color:#fff;border:none;border-radius:3px;cursor:pointer;">Delete</button>
-      </div>
-    `;
-    list.insertBefore(row, list.firstChild);
-    attachRowEvents(row);
+    
+    let current = getStoredParts();
+    current.unshift({ name: desc, pn: pn });
+    saveStoredParts(current);
+    renderPartsList(current);
+
     document.getElementById("s_custom_desc").value = "";
     document.getElementById("s_custom_pn").value = "";
   };
@@ -265,13 +287,17 @@
   document.getElementById("s_cancel").onclick = () => document.body.removeChild(overlay);
   document.getElementById("s_back").onclick = () => {
     document.body.removeChild(overlay);
-    if (window.reopenMasterLauncher) window.reopenMasterLauncher();
-    else if (window.reopenOEMLauncher) window.reopenOEMLauncher();
+    if (typeof window.reopenMasterLauncher === "function") window.reopenMasterLauncher();
+    else if (typeof window.reopenOEMLauncher === "function") window.reopenOEMLauncher();
   };
 
   // Apply Findings
   document.getElementById("s_copy").onclick = () => {
     let checkedBoxes = Array.from(box.querySelectorAll(".s_chk:checked"));
+    
+    // Record frequency usage for every checked part
+    checkedBoxes.forEach(cb => recordUsage(cb.value));
+
     let physicalParts = checkedBoxes.filter(cb => cb.dataset.pn !== "LABOR").map(cb => cb.value);
     let hasLabor = checkedBoxes.some(cb => cb.dataset.pn === "LABOR");
 
