@@ -1,5 +1,5 @@
-javascript:(function () {
-  let parts = [
+(function runOmniCalc() {
+  const initialParts = [
     { name: "BLANK LABEL, UNREPAIRED, 1.4 X 0.625 INCHES", pn: "PT00031722" },
     { name: "KANGAROO OMNI BACK CASE ASSEMBLY", pn: "PT00080641" },
     { name: "KANGAROO OMNI REAR LABEL, WIRELESS CONNECT, CLEAR LENS", pn: "PT00100425" },
@@ -12,6 +12,31 @@ javascript:(function () {
     { name: "KANGAROO PUMP VALVE GEARBOX", pn: "PT00093436" },
     { name: "KANGAROO PUMP 6-ROLLER ROTOR ASSY", pn: "PT00093668" },
   ];
+
+  function getStoredParts() {
+    try {
+      const stored = localStorage.getItem("omni_parts_list_v1");
+      if (stored) return JSON.parse(stored);
+    } catch (e) {}
+    localStorage.setItem("omni_parts_list_v1", JSON.stringify(initialParts));
+    return initialParts;
+  }
+
+  function saveStoredParts(list) {
+    localStorage.setItem("omni_parts_list_v1", JSON.stringify(list));
+  }
+
+  // Frequency Storage & Recording Helpers
+  function getFreq() {
+    try { return JSON.parse(localStorage.getItem('ot_freq_omni') || '{}'); }
+    catch(e) { return {}; }
+  }
+
+  function recordUsage(partName) {
+    let freq = getFreq();
+    freq[partName] = (freq[partName] || 0) + 1;
+    localStorage.setItem('ot_freq_omni', JSON.stringify(freq));
+  }
 
   let overlay = document.createElement("div");
   overlay.style.cssText = "position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:99999;display:flex;align-items:center;justify-content:center;font-family:sans-serif;";
@@ -56,6 +81,14 @@ javascript:(function () {
   overlay.appendChild(box);
   document.body.appendChild(overlay);
 
+  const getCurrentParts = () => {
+    let rows = Array.from(document.querySelectorAll("#o_parts_list .part_row"));
+    return rows.map((row) => ({
+      name: row.querySelector(".desc_txt").innerText.trim(),
+      pn: row.querySelector(".pn_txt").innerText.trim(),
+    }));
+  };
+
   const attachRowEvents = (row) => {
     row.querySelector(".o_edit_btn").onclick = () => {
       let newDesc = prompt("Edit Part Description:", row.querySelector(".desc_txt").innerText);
@@ -65,17 +98,26 @@ javascript:(function () {
           row.querySelector(".desc_txt").innerText = newDesc.trim();
           row.querySelector(".o_chk").value = newDesc.trim();
           row.querySelector(".pn_txt").innerText = newPn.trim();
+          saveStoredParts(getCurrentParts());
         } else {
           alert("Part Number cannot be blank.");
         }
       }
     };
-    row.querySelector(".o_del_btn").onclick = () => { row.remove(); };
+    row.querySelector(".o_del_btn").onclick = () => { 
+      row.remove(); 
+      saveStoredParts(getCurrentParts());
+    };
   };
 
   const renderParts = (partsArray) => {
     let list = document.getElementById("o_parts_list");
     list.innerHTML = "";
+    
+    let freq = getFreq();
+    // Sort dynamically by frequency (most frequently used items on top)
+    partsArray.sort((a, b) => (freq[b.name] || 0) - (freq[a.name] || 0));
+
     partsArray.forEach((p) => {
       let row = document.createElement("div");
       row.className = "part_row";
@@ -86,15 +128,7 @@ javascript:(function () {
     });
   };
 
-  renderParts(parts);
-
-  const getCurrentParts = () => {
-    let rows = Array.from(document.querySelectorAll("#o_parts_list .part_row"));
-    return rows.map((row) => ({
-      name: row.querySelector(".desc_txt").innerText.trim(),
-      pn: row.querySelector(".pn_txt").innerText.trim(),
-    }));
-  };
+  renderParts(getStoredParts());
 
   const applyText = (text) => {
     if (navigator.clipboard && navigator.clipboard.writeText) {
@@ -120,13 +154,12 @@ javascript:(function () {
     let desc = document.getElementById("o_custom_desc").value.trim();
     let pn = document.getElementById("o_custom_pn").value.trim();
     if (!desc || !pn) { alert("Both Part Description and Part # are required."); return; }
-    let list = document.getElementById("o_parts_list");
-    let row = document.createElement("div");
-    row.className = "part_row";
-    row.style.cssText = "display:flex;align-items:center;justify-content:space-between;padding:4px 0;font-size:12px;border-bottom:1px solid #f0f0f0;background:#eef6ff;";
-    row.innerHTML = `<label style="display:flex;align-items:center;cursor:pointer;flex:1;margin-right:10px;"><input type="checkbox" class="o_chk" value="${desc}" checked style="margin-right:8px;transform:scale(1.1);flex-shrink:0;"><span class="desc_txt">${desc}</span></label><div style="display:flex;align-items:center;gap:6px;"><span class="pn_txt" style="color:#666;font-family:monospace;white-space:nowrap;margin-right:4px;">${pn}</span><button class="o_edit_btn" style="padding:2px 6px;font-size:10px;background:#ffc107;color:#000;border:none;border-radius:3px;cursor:pointer;">Edit</button><button class="o_del_btn" style="padding:2px 6px;font-size:10px;background:#dc3545;color:#fff;border:none;border-radius:3px;cursor:pointer;">Delete</button></div>`;
-    list.insertBefore(row, list.firstChild);
-    attachRowEvents(row);
+    
+    let current = getStoredParts();
+    current.unshift({ name: desc, pn: pn });
+    saveStoredParts(current);
+    renderParts(current);
+
     document.getElementById("o_custom_desc").value = "";
     document.getElementById("o_custom_pn").value = "";
   };
@@ -147,7 +180,7 @@ javascript:(function () {
         if (content.trim().startsWith("[")) {
           importedParts = JSON.parse(content);
         } else {
-          let match = content.match(/const\s+parts\s*=\s*(\[\s*[\s\S]*?\n\s*\]);/);
+          let match = content.match(/let\s+parts\s*=\s*(\[\s*[\s\S]*?\n\s*\]);/);
           if (match) {
             importedParts = JSON.parse(match[1]);
           } else {
@@ -155,6 +188,7 @@ javascript:(function () {
           }
         }
         if (Array.isArray(importedParts) && importedParts.length > 0) {
+          saveStoredParts(importedParts);
           renderParts(importedParts);
           alert("Parts successfully imported!");
         } else {
@@ -170,7 +204,7 @@ javascript:(function () {
   // Export Source (.js) Handler
   document.getElementById("o_export_btn").onclick = () => {
     let currentParts = getCurrentParts();
-    let currentScript = arguments.callee.toString();
+    let currentScript = runOmniCalc.toString();
     let updatedPartsJson = JSON.stringify(currentParts, null, 2);
     let newScript = currentScript.replace(
       /let\s+parts\s*=\s*\[\s*[\s\S]*?\n\s*\];/,
@@ -193,11 +227,16 @@ javascript:(function () {
   document.getElementById("o_cancel").onclick = () => document.body.removeChild(overlay);
   document.getElementById("o_back").onclick = () => {
     document.body.removeChild(overlay);
-    if (window.reopenOEMLauncher) window.reopenOEMLauncher();
+    if (typeof window.reopenOEMLauncher === "function") window.reopenOEMLauncher();
   };
 
   document.getElementById("o_copy").onclick = () => {
-    let selectedParts = Array.from(box.querySelectorAll(".o_chk:checked")).map((cb) => cb.value);
+    let checkedEls = Array.from(box.querySelectorAll(".o_chk:checked"));
+    
+    // Record frequency usage for every checked part
+    checkedEls.forEach(cb => recordUsage(cb.value));
+
+    let selectedParts = checkedEls.map((cb) => cb.value);
     let text = selectedParts.length ? `Per the OEM, the following parts have been replaced: ${selectedParts.join(", ")} and passed the related testing.` : "Returned from OEM after required repairs.";
     applyText(text);
   };
