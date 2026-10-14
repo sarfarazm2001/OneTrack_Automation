@@ -10,7 +10,7 @@
     { name: "KANGAROO PUMP OVERLAY", pn: "PT00031552" },
     { name: "KANGAROO PUMP SPEAKER COVER", pn: "PT00106015" },
     { name: "KANGAROO PUMP VALVE GEARBOX", pn: "PT00093436" },
-    { name: "KANGAROO PUMP 6-ROLLER ROTOR ASSY", pn: "PT00093668" },
+    { name: "KANGAROO PUMP 6-ROLLER ROTOR ASSY", pn: "PT00093668" }
   ];
 
   function getStoredParts() {
@@ -180,7 +180,7 @@
         if (content.trim().startsWith("[")) {
           importedParts = JSON.parse(content);
         } else {
-          let match = content.match(/let\s+parts\s*=\s*(\[\s*[\s\S]*?\n\s*\]);/);
+          let match = content.match(/const initialParts =\s*(\[\s*[\s\S]*?\n\s*\]);/);
           if (match) {
             importedParts = JSON.parse(match[1]);
           } else {
@@ -207,8 +207,8 @@
     let currentScript = runOmniCalc.toString();
     let updatedPartsJson = JSON.stringify(currentParts, null, 2);
     let newScript = currentScript.replace(
-      /let\s+parts\s*=\s*\[\s*[\s\S]*?\n\s*\];/,
-      `let parts = ${updatedPartsJson};`
+      /const initialParts = \[\s*[\s\S]*?\n\s*\];/,
+      `const initialParts = ${updatedPartsJson};`
     );
 
     let fullSource = `javascript:(${newScript})();`;
@@ -225,9 +225,12 @@
 
   document.getElementById("o_oem_only").onclick = () => applyText("Returned from OEM after required repairs.");
   document.getElementById("o_cancel").onclick = () => document.body.removeChild(overlay);
+  
   document.getElementById("o_back").onclick = () => {
     document.body.removeChild(overlay);
-    if (typeof window.reopenOEMLauncher === "function") window.reopenOEMLauncher();
+    if (typeof window.openOneTrackToolkit === "function") {
+      window.openOneTrackToolkit();
+    }
   };
 
   document.getElementById("o_copy").onclick = () => {
