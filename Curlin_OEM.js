@@ -254,6 +254,8 @@
 
   document.getElementById('curlin_back_btn').onclick = () => {
     close();
-    if (typeof window.reopenMasterLauncher === "function") window.reopenMasterLauncher();
+    if (typeof window.openOneTrackToolkit === "function") {
+      window.openOneTrackToolkit();
+    }
   };
 })();
