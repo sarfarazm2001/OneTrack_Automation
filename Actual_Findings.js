@@ -355,7 +355,7 @@
     modal.remove();
   };
 
-  // 📤 EXPORT HANDLER (Fixed to reference outer function by name)
+  // 📤 EXPORT HANDLER
   document.getElementById('af_export_btn').onclick = () => {
     const currentList = getStoredPresets();
     const formattedDefaults = JSON.stringify(currentList, null, 2);
@@ -414,8 +414,8 @@
 
   document.getElementById('af_back_btn').onclick = () => {
     close();
-    if (typeof window.reopenMasterLauncher === "function") {
-      window.reopenMasterLauncher();
+    if (typeof window.openOneTrackToolkit === "function") {
+      window.openOneTrackToolkit();
     }
   };
 })();
