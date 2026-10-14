@@ -1,41 +1,66 @@
-(function(){
+(function runCommonRepairs() {
   const initialDefaults = [
-    "Bubbled keypad",
-    "Torn up keypad",
-    "Cracked back panel hinges",
-    "Broken back panel hinges",
-    "Cracked door clasp",
-    "Broken door clasp",
-    "Broken door hinges",
-    "Cracks on the top of the cassette bay",
-    "Protruded threaded insert",
-    "Slightly protruded threaded insert",
-    "Will not power on unless connected to a charger",
-    "Will not power on even when connected to a charger",
-    "Strong smoke smell",
-    "Marker stain on the door",
-    "Some kind of ink stain on rubber case",
-    "Failed Low Down Occlusion",
-    "Failed High Down Occlusion",
-    "Failed Up Occlusion",
-    "Failed Volume Test",
-    "BT2 reading:",
-    "BT3 reading:",
-    "Error Code:",
-    "SYSTEM TIMEOUT!",
-    "Standby Light failure"
-  ];
+  "Failed Volume Test",
+  "Failed Up Occlusion",
+  "Failed Low Down Occlusion",
+  "Failed High Down Occlusion",
+  "Needs baseline calibration.(CURLIN)",
+  "Bubbled keypad",
+  "Torn up keypad",
+  "Cracked back panel hinges",
+  "Broken back panel hinges",
+  "Cracked door clasp",
+  "Broken door clasp",
+  "Broken door hinges",
+  "Cracks on the top of the cassette bay",
+  "Cracked cassette bay.",
+  "Protruded threaded insert",
+  "Slightly protruded threaded insert",
+  "Will not power on unless connected to a charger",
+  "Will not power on even when connected to a charger",
+  "Broken LCD",
+  "Strong smoke smell",
+  "Marker stain on the door",
+  "Some kind of ink stain on rubber case",
+  "BT2 reading:",
+  "BT3 reading:",
+  "Error Code:",
+  "SYSTEM TIMEOUT!",
+  "MOTOR STALLED!",
+  "Standby Light failure"
+];
 
   // Map phrases that require unit values and custom placeholding
   const initialNumericConfig = {
-    "Failed Volume Test": { unit: "mL", placeholder: "e.g. 9.632" },
-    "Failed Low Down Occlusion": { unit: "psi", placeholder: "e.g. 10.5" },
-    "Failed High Down Occlusion": { unit: "psi", placeholder: "e.g. 18.2" },
-    "Failed Up Occlusion": { unit: "psi", placeholder: "e.g. -8.53" },
-    "BT2 reading:": { unit: "vdc", placeholder: "e.g. 0.480" },
-    "BT3 reading:": { unit: "vdc", placeholder: "e.g. 0.480" },
-    "Error Code:": { unit: "", placeholder: "e.g. 102" }
-  };
+  "Failed Volume Test": {
+    "unit": "mL",
+    "placeholder": "e.g. 9.632"
+  },
+  "Failed Low Down Occlusion": {
+    "unit": "psi",
+    "placeholder": "e.g. 10.5"
+  },
+  "Failed High Down Occlusion": {
+    "unit": "psi",
+    "placeholder": "e.g. 18.2"
+  },
+  "Failed Up Occlusion": {
+    "unit": "psi",
+    "placeholder": "e.g. -8.53"
+  },
+  "BT2 reading:": {
+    "unit": "vdc",
+    "placeholder": "e.g. 0.480"
+  },
+  "BT3 reading:": {
+    "unit": "vdc",
+    "placeholder": "e.g. 0.480"
+  },
+  "Error Code:": {
+    "unit": "",
+    "placeholder": "e.g. 102"
+  }
+};
 
   // Storage Handlers for Presets
   function getStoredPresets() {
@@ -65,6 +90,18 @@
     localStorage.setItem('cr_numeric_config_v1', JSON.stringify(config));
   }
 
+  // Frequency Storage & Recording Helpers
+  function getFreq() {
+    try { return JSON.parse(localStorage.getItem('ot_freq_common_repairs') || '{}'); }
+    catch(e) { return {}; }
+  }
+
+  function recordUsage(phrase) {
+    let freq = getFreq();
+    freq[phrase] = (freq[phrase] || 0) + 1;
+    localStorage.setItem('ot_freq_common_repairs', JSON.stringify(freq));
+  }
+
   // Format array into grammatically correct sentence
   function formatSelectedPhrases(phrases) {
     if (phrases.length === 0) return "";
@@ -77,14 +114,12 @@
   function applyTextToDOM(text) {
     if (!text) return;
 
-    // 1. Copy to Clipboard automatically
     if (navigator.clipboard && navigator.clipboard.writeText) {
       navigator.clipboard.writeText(text).catch(err => {
         console.warn("Clipboard copy failed: ", err);
       });
     }
 
-    // 2. Inject into target input/textarea field
     let targetEl = document.getElementById('Description') ||
                    document.querySelector('textarea[name="Description"]') ||
                    document.getElementById('findingsTextArea') || 
@@ -171,6 +206,14 @@
     listContainer.innerHTML = "";
     const presets = getStoredPresets();
     const numericConfigs = getNumericConfigs();
+    const freq = getFreq();
+
+    // Sort phrases dynamically by frequency (most frequently used items on top)
+    presets.sort((a, b) => {
+      let cleanA = a.replace(/\.$/, '').trim();
+      let cleanB = b.replace(/\.$/, '').trim();
+      return (freq[cleanB] || 0) - (freq[cleanA] || 0);
+    });
 
     presets.forEach((rawText, index) => {
       const pText = rawText.replace(/\.$/, '').trim();
@@ -252,6 +295,8 @@
       };
 
       textBtn.onclick = () => {
+        recordUsage(pText); // Record frequency
+
         let textToUse = pText;
         if (isNumeric && inputEl && inputEl.value.trim()) {
           const val = inputEl.value.trim();
@@ -383,6 +428,10 @@
       alert("Please select at least one item to insert.");
       return;
     }
+    
+    // Record frequency usage for all selected items
+    selectedMap.forEach((_, key) => recordUsage(key));
+
     const phrasesToInsert = Array.from(selectedMap.values());
     applyTextToDOM(formatSelectedPhrases(phrasesToInsert));
     modal.remove();
@@ -413,7 +462,7 @@
     const currentList = getStoredPresets();
     const currentConfigs = getNumericConfigs();
     
-    let scriptContent = arguments.callee.toString();
+    let scriptContent = runCommonRepairs.toString();
     scriptContent = `(${scriptContent})();`;
     scriptContent = scriptContent.replace(/const initialDefaults = \[\s[\s\S]*?\];/, `const initialDefaults = ${JSON.stringify(currentList, null, 2)};`);
     scriptContent = scriptContent.replace(/const initialNumericConfig = \{\s[\s\S]*?\};/, `const initialNumericConfig = ${JSON.stringify(currentConfigs, null, 2)};`);
@@ -479,8 +528,8 @@
 
   document.getElementById('cr_back_btn').onclick = () => {
     close();
-    if (typeof window.reopenMasterLauncher === "function") {
-      window.reopenMasterLauncher();
+    if (typeof window.openOneTrackToolkit === "function") {
+      window.openOneTrackToolkit();
     }
   };
 })();
