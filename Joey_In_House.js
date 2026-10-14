@@ -83,7 +83,6 @@
     localStorage.setItem("joey_inhouse_standards_v1", JSON.stringify(sData));
   }
 
-  // Frequency Storage Helpers
   function getFreq() {
     try { return JSON.parse(localStorage.getItem('ot_freq_joey_inhouse') || '{}'); }
     catch(e) { return {}; }
@@ -133,24 +132,16 @@
       <h3 style="margin:0;font-size:16px;font-weight:700;color:#fff;">Joey IN HOUSE Findings Generator</h3>
       <span id="j_close_x" style="cursor:pointer;font-size:20px;color:#8b949e;line-height:1;">&times;</span>
     </div>
-
-    <!-- Search & Add Bar -->
     <div style="display:flex;gap:6px;margin-bottom:10px;">
       <input type="text" id="j_search" placeholder="🔍 Search parts..." style="flex:1;padding:8px;background:#1e2329;color:#fff;border:1px solid #363d4a;border-radius:4px;font-size:12px;box-sizing:border-box;">
       <button id="j_add_btn" style="padding:8px 12px;background:#238636;color:#fff;border:none;border-radius:4px;cursor:pointer;font-weight:600;font-size:12px;white-space:nowrap;">➕ Add Part</button>
     </div>
-
-    <!-- Parts List -->
     <div id="j_parts_list" style="overflow-y:auto;flex:1;display:flex;flex-direction:column;gap:6px;padding-right:4px;"></div>
-
-    <!-- File Import/Export Bar -->
     <div style="display:flex;gap:6px;margin-top:10px;padding-top:10px;border-top:1px solid #2d333b;">
       <button id="j_export_btn" style="flex:1;padding:7px;background:#316dca;color:#fff;border:none;border-radius:4px;cursor:pointer;font-weight:600;font-size:11px;">📤 Export Source (.js)</button>
       <button id="j_import_btn" style="flex:1;padding:7px;background:#6e40c9;color:#fff;border:none;border-radius:4px;cursor:pointer;font-weight:600;font-size:11px;">📥 Import Parts File</button>
       <input type="file" id="j_import_file_input" accept=".js,.json" style="display:none;">
     </div>
-
-    <!-- Footer Controls -->
     <div style="display:flex;gap:8px;margin-top:12px;">
       <button id="j_reset_btn" title="Reset to defaults" style="padding:8px 12px;background:#484f58;color:#fff;border:none;border-radius:4px;cursor:pointer;font-weight:600;font-size:12px;">↺ Reset</button>
       <button id="j_back" style="flex:1;padding:8px;background:#363d4a;color:#fff;border:none;border-radius:4px;cursor:pointer;font-weight:600;font-size:12px;">← Back</button>
@@ -169,7 +160,6 @@
     const { highlightParts, standardParts } = getStoredData();
     const freq = getFreq();
 
-    // Sort parts dynamically by frequency first, then alphabetically as fallback
     const sortByFreq = (a, b) => {
       let countA = freq[a.name] || 0;
       let countB = freq[b.name] || 0;
@@ -232,8 +222,6 @@
 
   document.getElementById("j_copy").onclick = () => {
     let checkedEls = Array.from(box.querySelectorAll(".j_chk:checked"));
-    
-    // Record usage count for every checked part
     checkedEls.forEach(cb => recordUsage(cb.value));
 
     let selectedParts = checkedEls.map((cb) => cb.value);
