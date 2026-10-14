@@ -83,6 +83,18 @@
     localStorage.setItem("joey_inhouse_standards_v1", JSON.stringify(sData));
   }
 
+  // Frequency Storage Helpers
+  function getFreq() {
+    try { return JSON.parse(localStorage.getItem('ot_freq_joey_inhouse') || '{}'); }
+    catch(e) { return {}; }
+  }
+
+  function recordUsage(partName) {
+    let freq = getFreq();
+    freq[partName] = (freq[partName] || 0) + 1;
+    localStorage.setItem('ot_freq_joey_inhouse', JSON.stringify(freq));
+  }
+
   function applyTextToDOM(text) {
     if (navigator.clipboard && navigator.clipboard.writeText) {
       navigator.clipboard.writeText(text).catch((err) => console.warn("Clipboard copy failed:", err));
@@ -155,10 +167,19 @@
   function renderParts(filter = "") {
     listContainer.innerHTML = "";
     const { highlightParts, standardParts } = getStoredData();
+    const freq = getFreq();
 
-    const sortedHighlights = [...highlightParts].sort((a, b) => a.name.localeCompare(b.name));
+    // Sort parts dynamically by frequency first, then alphabetically as fallback
+    const sortByFreq = (a, b) => {
+      let countA = freq[a.name] || 0;
+      let countB = freq[b.name] || 0;
+      if (countB !== countA) return countB - countA;
+      return a.name.localeCompare(b.name);
+    };
+
+    const sortedHighlights = [...highlightParts].sort(sortByFreq);
     const seen = new Set(sortedHighlights.map((p) => p.name));
-    const unhighlighted = standardParts.filter((p) => !seen.has(p.name)).sort((a, b) => a.name.localeCompare(b.name));
+    const unhighlighted = standardParts.filter((p) => !seen.has(p.name)).sort(sortByFreq);
 
     const createRow = (p, isHighlight) => {
       if (filter && !p.name.toLowerCase().includes(filter.toLowerCase()) && !p.pn.toLowerCase().includes(filter.toLowerCase())) return null;
@@ -210,7 +231,12 @@
   });
 
   document.getElementById("j_copy").onclick = () => {
-    let selectedParts = Array.from(box.querySelectorAll(".j_chk:checked")).map((cb) => cb.value);
+    let checkedEls = Array.from(box.querySelectorAll(".j_chk:checked"));
+    
+    // Record usage count for every checked part
+    checkedEls.forEach(cb => recordUsage(cb.value));
+
+    let selectedParts = checkedEls.map((cb) => cb.value);
     let partsText = selectedParts.length ? selectedParts.join(", ") : "None";
     let text = `Parts replaced are as follows:\n${partsText}.`;
 
@@ -241,7 +267,6 @@
     }
   };
 
-  // 📤 EXPORT HANDLER
   document.getElementById("j_export_btn").onclick = () => {
     const { highlightParts, standardParts } = getStoredData();
     let scriptContent = runJoeyInHouse.toString();
@@ -260,7 +285,6 @@
     URL.revokeObjectURL(url);
   };
 
-  // 📥 IMPORT HANDLER
   const fileInput = document.getElementById("j_import_file_input");
   document.getElementById("j_import_btn").onclick = () => fileInput.click();
 
