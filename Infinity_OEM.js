@@ -1,4 +1,4 @@
-(function () {
+(function runInfinityCalc(){
   const initialParts = [
     { name: "INF Eval", pn: "INFEVAL", isEval: true },
     { name: "Backlight Difuser", pn: "25771-001" },
@@ -24,6 +24,18 @@
 
   function saveStoredParts(list) {
     localStorage.setItem('infinity_parts_list_v1', JSON.stringify(list));
+  }
+
+  // 1. Frequency Storage & Recording Helpers
+  function getFreq() {
+    try { return JSON.parse(localStorage.getItem('ot_freq_infinity') || '{}'); }
+    catch(e) { return {}; }
+  }
+
+  function recordUsage(partName) {
+    let freq = getFreq();
+    freq[partName] = (freq[partName] || 0) + 1;
+    localStorage.setItem('ot_freq_infinity', JSON.stringify(freq));
   }
 
   function applyTextToDOM(text) {
@@ -98,6 +110,10 @@
   function renderParts(filter = "") {
     listContainer.innerHTML = "";
     const partsList = getStoredParts();
+    const freq = getFreq();
+
+    // 2. Sort parts dynamically by frequency (most frequently used items on top)
+    partsList.sort((a, b) => (freq[b.name] || 0) - (freq[a.name] || 0));
 
     partsList.forEach((p) => {
       if (filter && !p.name.toLowerCase().includes(filter.toLowerCase()) && !p.pn.toLowerCase().includes(filter.toLowerCase())) return;
@@ -141,7 +157,16 @@
   });
 
   document.getElementById("inf_copy").onclick = () => {
-    let selected = Array.from(box.querySelectorAll(".inf_part:checked")).filter((cb) => cb.getAttribute("data-eval") !== "1").map((cb) => cb.value);
+    let checkedEls = Array.from(box.querySelectorAll(".inf_part:checked"));
+    
+    // 3. Record frequency usage for every checked part
+    checkedEls.forEach(cb => {
+      if (cb.getAttribute("data-eval") !== "1") {
+        recordUsage(cb.value);
+      }
+    });
+
+    let selected = checkedEls.filter((cb) => cb.getAttribute("data-eval") !== "1").map((cb) => cb.value);
     let partsText = selected.length ? selected.join(", ") : "";
     let text = `Per Moog Medical the following has been replaced: ${partsText}, and has met the release criteria associated with the inline inspection, testing and final release elements.`;
 
@@ -170,7 +195,7 @@
   // 📤 EXPORT HANDLER
   document.getElementById('inf_export_btn').onclick = () => {
     const currentParts = getStoredParts();
-    let scriptContent = arguments.callee.toString();
+    let scriptContent = runInfinityCalc.toString();
     scriptContent = `(${scriptContent})();`;
     scriptContent = scriptContent.replace(/const initialParts = \[\s[\s\S]*?\];/, `const initialParts = ${JSON.stringify(currentParts, null, 2)};`);
 
