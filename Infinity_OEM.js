@@ -245,6 +245,8 @@
 
   document.getElementById('inf_back_btn').onclick = () => {
     close();
-    if (typeof window.reopenOEMLauncher === "function") window.reopenOEMLauncher();
+    if (typeof window.openOneTrackToolkit === "function") {
+      window.openOneTrackToolkit();
+    }
   };
 })();
