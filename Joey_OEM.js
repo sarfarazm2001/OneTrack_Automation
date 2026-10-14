@@ -1,4 +1,4 @@
-(function () {
+(function runJoeyOEM() {
   const initialParts = [
     { name: "Back Case Overmold", pn: "F319275CS" },
     { name: "Battery Assembly Li. Ion", pn: "F0105065CS" },
@@ -44,6 +44,18 @@
 
   function saveStoredParts(list) {
     localStorage.setItem("joey_oem_parts_list_v1", JSON.stringify(list));
+  }
+
+  // Frequency Storage & Recording Helpers
+  function getFreq() {
+    try { return JSON.parse(localStorage.getItem('ot_freq_joey_oem') || '{}'); }
+    catch(e) { return {}; }
+  }
+
+  function recordUsage(partName) {
+    let freq = getFreq();
+    freq[partName] = (freq[partName] || 0) + 1;
+    localStorage.setItem('ot_freq_joey_oem', JSON.stringify(freq));
   }
 
   function applyTextToDOM(text) {
@@ -118,6 +130,10 @@
   function renderParts(filter = "") {
     listContainer.innerHTML = "";
     const partsList = getStoredParts();
+    const freq = getFreq();
+
+    // Sort parts dynamically by frequency (most frequently used items on top)
+    partsList.sort((a, b) => (freq[b.name] || 0) - (freq[a.name] || 0));
 
     partsList.forEach((p) => {
       if (filter && !p.name.toLowerCase().includes(filter.toLowerCase()) && !p.pn.toLowerCase().includes(filter.toLowerCase())) return;
@@ -157,7 +173,12 @@
   });
 
   document.getElementById("j_copy").onclick = () => {
-    let selectedParts = Array.from(box.querySelectorAll(".j_chk:checked")).map((cb) => cb.value);
+    let checkedEls = Array.from(box.querySelectorAll(".j_chk:checked"));
+    
+    // Record frequency usage for every checked part
+    checkedEls.forEach(cb => recordUsage(cb.value));
+
+    let selectedParts = checkedEls.map((cb) => cb.value);
     let partsText = selectedParts.length ? selectedParts.join(", ") : "";
     let text = `Per the OEM, the following parts have been replaced: ${partsText} and passed the related testing. The OEM also certified that the device passed the following: Buzzer Test, LED Test, Battery Test, MISTIC Test, and Audio Test.`;
 
@@ -183,10 +204,9 @@
     }
   };
 
-  // 📤 EXPORT HANDLER
   document.getElementById("j_export_btn").onclick = () => {
     const currentParts = getStoredParts();
-    let scriptContent = arguments.callee.toString();
+    let scriptContent = runJoeyOEM.toString();
     scriptContent = `(${scriptContent})();`;
     scriptContent = scriptContent.replace(/const initialParts = \[\s[\s\S]*?\];/, `const initialParts = ${JSON.stringify(currentParts, null, 2)};`);
 
@@ -201,7 +221,6 @@
     URL.revokeObjectURL(url);
   };
 
-  // 📥 IMPORT HANDLER
   const fileInput = document.getElementById("j_import_file_input");
   document.getElementById("j_import_btn").onclick = () => fileInput.click();
 
