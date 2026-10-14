@@ -214,8 +214,8 @@
     const partsJson = JSON.stringify(currentParts, null, 4);
     
     const modifiedCode = `(${selfCode})()`.replace(
-      /let initialParts = \[[\s\S]*?\];/,
-      `let initialParts = ${partsJson};`
+      /const initialParts = \[[\s\S]*?\];/,
+      `const initialParts = ${partsJson};`
     );
 
     const blob = new Blob([modifiedCode], { type: "application/javascript" });
@@ -247,7 +247,7 @@
         if (file.name.endsWith(".json")) {
           importedParts = JSON.parse(fileContent);
         } else if (file.name.endsWith(".js")) {
-          const match = fileContent.match(/let initialParts = (\[[\s\S]*?\]);/) || fileContent.match(/let parts = (\[[\s\S]*?\]);/);
+          const match = fileContent.match(/const initialParts = (\[[\s\S]*?\]);/) || fileContent.match(/let parts = (\[[\s\S]*?\]);/);
           if (match && match[1]) {
             importedParts = JSON.parse(match[1]);
           } else {
@@ -285,10 +285,12 @@
   };
 
   document.getElementById("s_cancel").onclick = () => document.body.removeChild(overlay);
+  
   document.getElementById("s_back").onclick = () => {
     document.body.removeChild(overlay);
-    if (typeof window.reopenMasterLauncher === "function") window.reopenMasterLauncher();
-    else if (typeof window.reopenOEMLauncher === "function") window.reopenOEMLauncher();
+    if (typeof window.openOneTrackToolkit === "function") {
+      window.openOneTrackToolkit();
+    }
   };
 
   // Apply Findings
