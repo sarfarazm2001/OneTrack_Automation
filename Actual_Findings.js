@@ -11,7 +11,6 @@
   };
 
   const initialDefaults = [
-  "TE: 8TR, 77TR, 148TR, 134TR, 6J",
   "Outdated battery and it needs to be changed. (JOEY)",
   "Battery replaced on {DATE}. (JOEY)",
   "This device is under warranty.",
