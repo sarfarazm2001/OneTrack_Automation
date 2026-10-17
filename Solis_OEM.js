@@ -326,11 +326,11 @@
     }
   };
 
-  // --- STRICT DISCRIMINATING OCR AUTO-SELECT HANDLER FOR SOLIS ---
+  // --- REFINED EXCLUSION-BASED OCR AUTO-SELECT HANDLER FOR SOLIS ---
   window._otAutoSelectSolis = function(ocrText) {
     if (!ocrText) return 0;
 
-    // Preprocess OCR text: join wrapped hyphens and clean punctuation to single spaces
+    // Normalize OCR text
     const cleanOCR = ocrText
       .toUpperCase()
       .replace(/-\s*[\r\n]+\s*/g, '')
@@ -341,6 +341,13 @@
     let matchedCount = 0;
     const checkboxes = box.querySelectorAll('.s_chk');
 
+    // Key markers detected in full scan
+    const has2120 = cleanOCR.includes('2120');
+    const has3rd = cleanOCR.includes('3RD') || cleanOCR.includes('THIRD');
+    const hasCostaRica = cleanOCR.includes('COSTA') || cleanOCR.includes('RICA');
+    const hasDrkGrey = cleanOCR.includes('GREY') || cleanOCR.includes('GRAY') || cleanOCR.includes('DRK');
+    const hasKeypadOverlay = cleanOCR.includes('21-2101') || cleanOCR.includes('212101') || cleanOCR.includes('KEYPAD');
+
     checkboxes.forEach(chk => {
       const rawName = (chk.value || '').toUpperCase().trim();
       const pnAttr = (chk.dataset.pn || '').toUpperCase().trim();
@@ -349,57 +356,62 @@
 
       let isMatch = false;
 
-      // 1. LABELS (Strict keyword conditions to prevent cross-matching variants)
-      if (rawName.includes('COSTA RICA')) {
-        isMatch = cleanOCR.includes('COSTA') && cleanOCR.includes('RICA') && cleanOCR.includes('BLUE');
-      } 
-      else if (rawName.includes('DRK GREY')) {
-        isMatch = (cleanOCR.includes('GREY') || cleanOCR.includes('GRAY') || cleanOCR.includes('DRK')) && cleanOCR.includes('2120');
-      } 
-      else if (rawName.includes('MODEL 2120') && rawName.includes('BLUE')) {
-        isMatch = cleanOCR.includes('2120') && cleanOCR.includes('BLUE') && !cleanOCR.includes('COSTA') && !cleanOCR.includes('GREY') && !cleanOCR.includes('GRAY');
-      } 
-      else if (rawName.includes('VIP 1.2')) {
-        isMatch = cleanOCR.includes('1.2') || cleanOCR.includes('VIP 1.2');
-      } 
-      else if (rawName.includes('LBL, SET, DEVICE') || rawName.includes('LBL SET DEVICE')) {
+      // 1. LABELS (Strict mutually-exclusive rules)
+      if (rawName.includes('MODEL 2120, VIP, 3RD EDITION') && rawName.includes('COSTA RICA')) {
+        isMatch = has2120 && hasCostaRica;
+      }
+      else if (rawName.includes('MODEL 2120, VIP, 3RD EDITION') && rawName.includes('DRK GREY')) {
+        isMatch = has2120 && hasDrkGrey;
+      }
+      else if (rawName.includes('MODEL 2120, VIP, 3RD EDITION') && rawName.includes('BLUE')) {
+        isMatch = has2120 && !hasCostaRica && !hasDrkGrey;
+      }
+      else if (rawName.includes('LBL, DEVICE, PUMP, CADD-SOLIS, VIP, BLUE')) {
+        // Only select shorter "VIP, BLUE" label if 2120 model marker is missing!
+        isMatch = cleanOCR.includes('BLUE') && cleanOCR.includes('VIP') && !has2120 && !has3rd;
+      }
+      else if (rawName.includes('LBL, DEVICE, PUMP, CADD-SOLIS, VIP, BLACK')) {
+        isMatch = cleanOCR.includes('BLACK') && cleanOCR.includes('VIP') && !has2120;
+      }
+      else if (rawName.includes('LBL, DEVICE, PUMP, CADD-SOLIS, VIP 1.2')) {
+        isMatch = cleanOCR.includes('1.2');
+      }
+      else if (rawName.includes('LBL, SET, DEVICE, CADD-SOLIS')) {
         isMatch = cleanOCR.includes('SET') && (cleanOCR.includes('LBL') || cleanOCR.includes('LABEL') || cleanOCR.includes('DEVICE'));
       }
       else if (rawName.includes('LABEL, PUMP, REAR')) {
         isMatch = cleanOCR.includes('REAR') && cleanOCR.includes('LABEL');
       }
 
-      // 2. KEYPADS & OVERLAYS
-      else if (rawName.includes('OVERLAY') && (rawName.includes('KEYPAD') || rawName.includes('21-2101-08'))) {
-        isMatch = cleanOCR.includes('OVERLAY') && (cleanOCR.includes('KEYPAD') || cleanOCR.includes('21-2101') || cleanOCR.includes('21210108'));
+      // 2. OVERLAYS & KEYPADS
+      else if (rawName.includes('OVERLAY, MEMBRANE SWITCH (KEYPAD)')) {
+        isMatch = cleanOCR.includes('OVERLAY') && hasKeypadOverlay;
       }
-      else if (rawName.includes('OVERLAY') && rawName.includes('ENGLISH')) {
-        isMatch = cleanOCR.includes('OVERLAY') && (cleanOCR.includes('ENGLISH') || cleanOCR.includes('CE'));
+      else if (rawName.includes('OVERLAY, MEMBRANE SWITCH, CE ENGLISH')) {
+        // Explicitly exclude CE ENGLISH if keypad overlay marker is present
+        isMatch = cleanOCR.includes('OVERLAY') && (cleanOCR.includes('ENGLISH') || cleanOCR.includes('CE')) && !hasKeypadOverlay;
       }
-      else if (rawName.includes('KEYPAD, MEMBRANE SW')) {
-        isMatch = cleanOCR.includes('KEYPAD') && cleanOCR.includes('MEMBRANE') && !cleanOCR.includes('OVERLAY');
+      else if (rawName.includes('KEYPAD, MEMBRANE SW, W/O CONN')) {
+        isMatch = cleanOCR.includes('KEYPAD') && (cleanOCR.includes('MEMBRANE') || cleanOCR.includes('CONN') || cleanOCR.includes('W/O'));
       }
 
       // 3. HOUSINGS & DOORS
-      else if (rawName.includes('HSG, BATTERY COMPARTMENT') || rawName.includes('HSG BATTERY')) {
+      else if (rawName.includes('HSG, BATTERY COMPARTMENT')) {
         isMatch = (cleanOCR.includes('HSG') || cleanOCR.includes('HOUSING')) && cleanOCR.includes('BATTERY') && cleanOCR.includes('COMPARTMENT');
       }
       else if (rawName.includes('DOOR AY, BATTERY, PUMP')) {
         isMatch = cleanOCR.includes('DOOR') && cleanOCR.includes('BATTERY');
       }
 
-      // 4. SEALS, SENSORS & BEZELS
+      // 4. SEALS & SENSORS (Tolerates OCR zero/O typos)
       else if (rawName.includes('SEAL, DSO, NEOPRENE')) {
-        isMatch = cleanOCR.includes('SEAL') && cleanOCR.includes('DSO') && cleanOCR.includes('NEOPRENE');
+        isMatch = cleanOCR.includes('NEOPRENE') || (cleanOCR.includes('SEAL') && (cleanOCR.includes('DSO') || cleanOCR.includes('DS0')));
       }
       else if (rawName.includes('BEZEL, DSO')) {
-        isMatch = cleanOCR.includes('BEZEL') && cleanOCR.includes('DSO');
+        isMatch = cleanOCR.includes('BEZEL') && (cleanOCR.includes('DSO') || cleanOCR.includes('DS0'));
       }
       else if (rawName.includes('SENSOR, DSO')) {
-        isMatch = cleanOCR.includes('SENSOR') && cleanOCR.includes('DSO');
-      }
-      else if (rawName.includes('BEZEL, CASSETTE')) {
-        isMatch = cleanOCR.includes('BEZEL') && cleanOCR.includes('CASSETTE');
+        isMatch = cleanOCR.includes('SENSOR') && (cleanOCR.includes('DSO') || cleanOCR.includes('DS0'));
       }
       else if (rawName.includes('SEAL, DIAPHRAGM')) {
         isMatch = cleanOCR.includes('SEAL') && cleanOCR.includes('DIAPHRAGM');
@@ -407,10 +419,10 @@
 
       // 5. LENS
       else if (rawName.includes('LENS, PAD PRINTED')) {
-        isMatch = cleanOCR.includes('LENS') && (cleanOCR.includes('PAD') || cleanOCR.includes('PRINTED'));
+        isMatch = cleanOCR.includes('LENS') || (cleanOCR.includes('PAD') && cleanOCR.includes('PRINTED'));
       }
 
-      // 6. GENERAL FALLBACK FOR OTHER PARTS
+      // 6. GENERAL FALLBACK FOR OTHER SOLIS PARTS
       else {
         const stopWords = ['CADD', 'SOLIS', 'PUMP', 'DEVICE', 'MODEL', 'WITH', 'FROM', 'CONN', '1/EA', 'ONLY'];
         const cleanName = rawName.replace(/[^A-Z0-9\s]/g, ' ');
