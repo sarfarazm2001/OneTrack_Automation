@@ -39,6 +39,7 @@
   }
 
   let overlay = document.createElement("div");
+  overlay.id = "omni-calc-modal";
   overlay.style.cssText = "position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:99999;display:flex;align-items:center;justify-content:center;font-family:sans-serif;";
 
   let box = document.createElement("div");
@@ -98,6 +99,7 @@
           row.querySelector(".desc_txt").innerText = newDesc.trim();
           row.querySelector(".o_chk").value = newDesc.trim();
           row.querySelector(".pn_txt").innerText = newPn.trim();
+          row.querySelector(".o_chk").dataset.pn = newPn.trim();
           saveStoredParts(getCurrentParts());
         } else {
           alert("Part Number cannot be blank.");
@@ -115,14 +117,14 @@
     list.innerHTML = "";
     
     let freq = getFreq();
-    // Sort dynamically by frequency (most frequently used items on top)
+    // Sort dynamically by frequency
     partsArray.sort((a, b) => (freq[b.name] || 0) - (freq[a.name] || 0));
 
     partsArray.forEach((p) => {
       let row = document.createElement("div");
       row.className = "part_row";
       row.style.cssText = "display:flex;align-items:center;justify-content:space-between;padding:4px 0;font-size:12px;border-bottom:1px solid #f0f0f0;";
-      row.innerHTML = `<label style="display:flex;align-items:center;cursor:pointer;flex:1;margin-right:10px;"><input type="checkbox" class="o_chk" value="${p.name}" style="margin-right:8px;transform:scale(1.1);flex-shrink:0;"><span class="desc_txt">${p.name}</span></label><div style="display:flex;align-items:center;gap:6px;"><span class="pn_txt" style="color:#666;font-family:monospace;white-space:nowrap;margin-right:4px;">${p.pn}</span><button class="o_edit_btn" style="padding:2px 6px;font-size:10px;background:#ffc107;color:#000;border:none;border-radius:3px;cursor:pointer;">Edit</button><button class="o_del_btn" style="padding:2px 6px;font-size:10px;background:#dc3545;color:#fff;border:none;border-radius:3px;cursor:pointer;">Delete</button></div>`;
+      row.innerHTML = `<label style="display:flex;align-items:center;cursor:pointer;flex:1;margin-right:10px;"><input type="checkbox" class="o_chk" data-pn="${p.pn}" value="${p.name}" style="margin-right:8px;transform:scale(1.1);flex-shrink:0;"><span class="desc_txt">${p.name}</span></label><div style="display:flex;align-items:center;gap:6px;"><span class="pn_txt" style="color:#666;font-family:monospace;white-space:nowrap;margin-right:4px;">${p.pn}</span><button class="o_edit_btn" style="padding:2px 6px;font-size:10px;background:#ffc107;color:#000;border:none;border-radius:3px;cursor:pointer;">Edit</button><button class="o_del_btn" style="padding:2px 6px;font-size:10px;background:#dc3545;color:#fff;border:none;border-radius:3px;cursor:pointer;">Delete</button></div>`;
       list.appendChild(row);
       attachRowEvents(row);
     });
@@ -242,5 +244,72 @@
     let selectedParts = checkedEls.map((cb) => cb.value);
     let text = selectedParts.length ? `Per the OEM, the following parts have been replaced: ${selectedParts.join(", ")} and passed the related testing.` : "Returned from OEM after required repairs.";
     applyText(text);
+  };
+
+  // --- AUTOMATED OCR AUTO-SELECT HANDLER FOR OMNI (WITH UNMATCHED REPORTING) ---
+  window._otAutoSelectOmni = function(ocrText) {
+    if (!ocrText) return 0;
+
+    const cleanOCR = ocrText.toUpperCase();
+    const alphaNumOCR = cleanOCR.replace(/[^A-Z0-9]/g, '');
+    let matchedCount = 0;
+
+    const checkboxes = box.querySelectorAll('.o_chk');
+    const availablePNs = [];
+
+    checkboxes.forEach(chk => {
+      const pn = (chk.dataset.pn || '').toUpperCase().trim();
+      if (pn && pn !== 'N/A') {
+        availablePNs.push({
+          checkbox: chk,
+          rawPN: pn,
+          cleanPN: pn.replace(/[^A-Z0-9]/g, ''),
+          name: chk.value
+        });
+      }
+    });
+
+    // 1. Check for matching parts
+    availablePNs.forEach(item => {
+      const escPN = item.rawPN.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
+      const pnRegex = new RegExp(`(?:^|[^A-Z0-9])${escPN}(?:[^A-Z0-9]|$)`, 'i');
+
+      if (pnRegex.test(cleanOCR) || (item.cleanPN.length >= 5 && alphaNumOCR.includes(item.cleanPN))) {
+        if (!item.checkbox.checked) {
+          item.checkbox.checked = true;
+          item.checkbox.dispatchEvent(new Event('change', { bubbles: true }));
+        }
+        matchedCount++;
+      }
+    });
+
+    // 2. Extract potential Part Numbers on sheet that were NOT in the list
+    const candidateTokens = cleanOCR.match(/\bPT[0-9]{5,10}\b|\b[A-Z0-9]{6,12}\b/gi) || [];
+    const uniqueCandidates = [...new Set(candidateTokens.map(t => t.toUpperCase()))]
+      .filter(t => !['KANGAROO', 'ASSEMBLY', 'REPAIRS', 'RETURNED', 'REQUIRED', 'PUMP', 'SPEAKER', 'OVERLAY'].includes(t));
+
+    const unmatchedPNs = [];
+    uniqueCandidates.forEach(cand => {
+      const cleanCand = cand.replace(/[^A-Z0-9]/g, '');
+      if (/^PT\d+/i.test(cand) || (/\d/.test(cand) && cand.length >= 7)) {
+        let isKnown = availablePNs.some(item => item.rawPN.includes(cand) || cand.includes(item.rawPN) || item.cleanPN === cleanCand);
+        if (!isKnown) {
+          unmatchedPNs.push(cand);
+        }
+      }
+    });
+
+    // 3. Display alert if unmatched part numbers exist on the service sheet
+    if (unmatchedPNs.length > 0) {
+      alert(`⚠️ Auto-Selection Notice:\n\nSelected ${matchedCount} matching part(s).\n\nThe following part number(s) were found on the sheet but NOT listed in Omni Calculator:\n• ${unmatchedPNs.join('\n• ')}`);
+    }
+
+    return matchedCount;
+  };
+
+  // Register with toolkit window observer
+  window._otCurrentOEMTool = {
+    id: 'omni',
+    autoSelect: window._otAutoSelectOmni
   };
 })();
