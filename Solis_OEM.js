@@ -326,118 +326,124 @@
     }
   };
 
-  // --- REFINED EXCLUSION-BASED OCR AUTO-SELECT HANDLER FOR SOLIS ---
+  // --- DEDICATED ONE-TO-ONE ROW-BASED OCR MATCHING ENGINE FOR SOLIS ---
   window._otAutoSelectSolis = function(ocrText) {
     if (!ocrText) return 0;
 
-    // Normalize OCR text
-    const cleanOCR = ocrText
-      .toUpperCase()
-      .replace(/-\s*[\r\n]+\s*/g, '')
-      .replace(/[\r\n]+/g, ' ')
-      .replace(/[^A-Z0-9.\-\/]/g, ' ')
-      .replace(/\s+/g, ' ');
+    // 1. Isolate the "PARTS REPLACED" block
+    let partsSection = ocrText;
+    const partsIdx = ocrText.search(/PARTS\s*REPLACED/i);
+    if (partsIdx !== -1) {
+      partsSection = ocrText.substring(partsIdx);
+    }
 
+    // 2. Pre-clean text: re-join hyphenated line wraps (e.g. CADD-\nSOLIS -> CADD-SOLIS)
+    let cleanText = partsSection
+      .replace(/([A-Z0-9]+)-\s*[\r\n]+\s*([A-Z0-9]+)/gi, '$1-$2')
+      .replace(/[\r\n]+/g, '\n');
+
+    // 3. Extract non-empty lines, ignoring generic table headers
+    let lines = cleanText.split('\n')
+      .map(l => l.trim())
+      .filter(l => l.length > 0)
+      .filter(l => !/^(TESTING|PARTS\s*REPLACED|QTY|DESCRIPTION|SPEC|RESULT|PVT\s*TEST)/i.test(l));
+
+    // 4. Assemble multi-line table rows into single item entries
+    const rowStartsRegex = /^(HSG|DOOR|SEAL|OVERLAY|LBL|LABEL|KEYPAD|LENS|BEZEL|SENSOR|AIR|GASKET|DISPLAY|CONNECTOR|BRACKET|FLEX|CAMSHAFT|BEARING|GEAR|INSULATOR|PLATE|PIN|STABILIZER|SOLIS|VALVE|NLT|ADHESIVE|CONTACT|DISK|EXPULSOR|FOAM|GUARD|HANDLE|HARNESS|LATCH|PAD|PCBA|STRIP|SWITCH|TAB|TAPE)\b/i;
+
+    let rowEntries = [];
+    let currentEntry = "";
+
+    lines.forEach(line => {
+      let cleanLine = line.replace(/^\d+[\s\t\|]*/, '').trim();
+
+      if (rowStartsRegex.test(cleanLine) || /^\d+[\s\t\|]+/.test(line) || !currentEntry) {
+        if (currentEntry) rowEntries.push(currentEntry);
+        currentEntry = cleanLine;
+      } else {
+        currentEntry += " " + cleanLine;
+      }
+    });
+    if (currentEntry) rowEntries.push(currentEntry);
+
+    // 5. Normalization helper for fuzzy OCR comparison
+    const normalize = (str) => {
+      return (str || '')
+        .toUpperCase()
+        .replace(/DS0/g, 'DSO')
+        .replace(/S0LIS/g, 'SOLIS')
+        .replace(/HOUSING/g, 'HSG')
+        .replace(/ASSY/g, 'AY')
+        .replace(/LABEL/g, 'LBL')
+        .replace(/SWITCH/g, 'SW')
+        .replace(/[^A-Z0-9\s]/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim();
+    };
+
+    const checkboxes = Array.from(box.querySelectorAll('.s_chk'));
     let matchedCount = 0;
-    const checkboxes = box.querySelectorAll('.s_chk');
 
-    // Key markers detected in full scan
-    const has2120 = cleanOCR.includes('2120');
-    const has3rd = cleanOCR.includes('3RD') || cleanOCR.includes('THIRD');
-    const hasCostaRica = cleanOCR.includes('COSTA') || cleanOCR.includes('RICA');
-    const hasDrkGrey = cleanOCR.includes('GREY') || cleanOCR.includes('GRAY') || cleanOCR.includes('DRK');
-    const hasKeypadOverlay = cleanOCR.includes('21-2101') || cleanOCR.includes('212101') || cleanOCR.includes('KEYPAD');
+    // 6. For EACH rowEntry extracted from the paper, find the SINGLE BEST catalog match
+    rowEntries.forEach(rawRow => {
+      const rowNorm = normalize(rawRow);
+      if (rowNorm.length < 3) return;
 
-    checkboxes.forEach(chk => {
-      const rawName = (chk.value || '').toUpperCase().trim();
-      const pnAttr = (chk.dataset.pn || '').toUpperCase().trim();
+      let bestCheckbox = null;
+      let highestScore = 0;
 
-      if (!rawName || pnAttr === 'LABOR' || rawName.includes("ONLY SELECT WHEN NOTHING ELSE") || rawName.includes("DO NOT USE")) return;
+      checkboxes.forEach(chk => {
+        const rawName = (chk.value || '').trim();
+        const pnAttr = (chk.dataset.pn || '').trim();
 
-      let isMatch = false;
+        // Skip non-physical items or obsolete items
+        if (!rawName || pnAttr === 'LABOR' || rawName.includes("ONLY SELECT WHEN NOTHING") || rawName.includes("DO NOT USE")) return;
 
-      // 1. LABELS (Strict mutually-exclusive rules)
-      if (rawName.includes('MODEL 2120, VIP, 3RD EDITION') && rawName.includes('COSTA RICA')) {
-        isMatch = has2120 && hasCostaRica;
-      }
-      else if (rawName.includes('MODEL 2120, VIP, 3RD EDITION') && rawName.includes('DRK GREY')) {
-        isMatch = has2120 && hasDrkGrey;
-      }
-      else if (rawName.includes('MODEL 2120, VIP, 3RD EDITION') && rawName.includes('BLUE')) {
-        isMatch = has2120 && !hasCostaRica && !hasDrkGrey;
-      }
-      else if (rawName.includes('LBL, DEVICE, PUMP, CADD-SOLIS, VIP, BLUE')) {
-        // Only select shorter "VIP, BLUE" label if 2120 model marker is missing!
-        isMatch = cleanOCR.includes('BLUE') && cleanOCR.includes('VIP') && !has2120 && !has3rd;
-      }
-      else if (rawName.includes('LBL, DEVICE, PUMP, CADD-SOLIS, VIP, BLACK')) {
-        isMatch = cleanOCR.includes('BLACK') && cleanOCR.includes('VIP') && !has2120;
-      }
-      else if (rawName.includes('LBL, DEVICE, PUMP, CADD-SOLIS, VIP 1.2')) {
-        isMatch = cleanOCR.includes('1.2');
-      }
-      else if (rawName.includes('LBL, SET, DEVICE, CADD-SOLIS')) {
-        isMatch = cleanOCR.includes('SET') && (cleanOCR.includes('LBL') || cleanOCR.includes('LABEL') || cleanOCR.includes('DEVICE'));
-      }
-      else if (rawName.includes('LABEL, PUMP, REAR')) {
-        isMatch = cleanOCR.includes('REAR') && cleanOCR.includes('LABEL');
-      }
+        const nameNorm = normalize(rawName);
 
-      // 2. OVERLAYS & KEYPADS
-      else if (rawName.includes('OVERLAY, MEMBRANE SWITCH (KEYPAD)')) {
-        isMatch = cleanOCR.includes('OVERLAY') && hasKeypadOverlay;
-      }
-      else if (rawName.includes('OVERLAY, MEMBRANE SWITCH, CE ENGLISH')) {
-        // Explicitly exclude CE ENGLISH if keypad overlay marker is present
-        isMatch = cleanOCR.includes('OVERLAY') && (cleanOCR.includes('ENGLISH') || cleanOCR.includes('CE')) && !hasKeypadOverlay;
-      }
-      else if (rawName.includes('KEYPAD, MEMBRANE SW, W/O CONN')) {
-        isMatch = cleanOCR.includes('KEYPAD') && (cleanOCR.includes('MEMBRANE') || cleanOCR.includes('CONN') || cleanOCR.includes('W/O'));
-      }
+        // Tokenize catalog name into key words (excluding generic Solis filler words)
+        const stopWords = ['CADD', 'SOLIS', 'PUMP', 'DEVICE', '1/EA', 'W', 'RX', 'ONLY'];
+        const tokens = nameNorm.split(' ').filter(t => t.length >= 2 && !stopWords.includes(t));
 
-      // 3. HOUSINGS & DOORS
-      else if (rawName.includes('HSG, BATTERY COMPARTMENT')) {
-        isMatch = (cleanOCR.includes('HSG') || cleanOCR.includes('HOUSING')) && cleanOCR.includes('BATTERY') && cleanOCR.includes('COMPARTMENT');
-      }
-      else if (rawName.includes('DOOR AY, BATTERY, PUMP')) {
-        isMatch = cleanOCR.includes('DOOR') && cleanOCR.includes('BATTERY');
-      }
+        if (tokens.length === 0) return;
 
-      // 4. SEALS & SENSORS (Tolerates OCR zero/O typos)
-      else if (rawName.includes('SEAL, DSO, NEOPRENE')) {
-        isMatch = cleanOCR.includes('NEOPRENE') || (cleanOCR.includes('SEAL') && (cleanOCR.includes('DSO') || cleanOCR.includes('DS0')));
-      }
-      else if (rawName.includes('BEZEL, DSO')) {
-        isMatch = cleanOCR.includes('BEZEL') && (cleanOCR.includes('DSO') || cleanOCR.includes('DS0'));
-      }
-      else if (rawName.includes('SENSOR, DSO')) {
-        isMatch = cleanOCR.includes('SENSOR') && (cleanOCR.includes('DSO') || cleanOCR.includes('DS0'));
-      }
-      else if (rawName.includes('SEAL, DIAPHRAGM')) {
-        isMatch = cleanOCR.includes('SEAL') && cleanOCR.includes('DIAPHRAGM');
-      }
+        let matchedTokens = 0;
+        tokens.forEach(t => {
+          const wordRegex = new RegExp(`(?:^|\\s)${t}(?:\\s|$)`, 'i');
+          if (wordRegex.test(rowNorm) || rowNorm.includes(t)) {
+            matchedTokens++;
+          }
+        });
 
-      // 5. LENS
-      else if (rawName.includes('LENS, PAD PRINTED')) {
-        isMatch = cleanOCR.includes('LENS') || (cleanOCR.includes('PAD') && cleanOCR.includes('PRINTED'));
-      }
+        const matchRatio = matchedTokens / tokens.length;
 
-      // 6. GENERAL FALLBACK FOR OTHER SOLIS PARTS
-      else {
-        const stopWords = ['CADD', 'SOLIS', 'PUMP', 'DEVICE', 'MODEL', 'WITH', 'FROM', 'CONN', '1/EA', 'ONLY'];
-        const cleanName = rawName.replace(/[^A-Z0-9\s]/g, ' ');
-        const keywords = cleanName.split(' ').filter(w => w.length >= 4 && !stopWords.includes(w));
+        // Require at least 60% of key tokens to be present
+        if (matchRatio >= 0.6) {
+          // Base score: percentage of matched tokens + length of catalog string (rewards more specific matches)
+          let score = (matchRatio * 100) + (rawName.length * 0.5);
 
-        if (keywords.length > 0) {
-          isMatch = keywords.every(kw => cleanOCR.includes(kw));
+          // Specificity Bonuses & Penalties
+          if (nameNorm.includes('2120') && rowNorm.includes('2120')) score += 40;
+          if (nameNorm.includes('COSTA') && rowNorm.includes('COSTA')) score += 40;
+          if (nameNorm.includes('DRK') && (rowNorm.includes('DRK') || rowNorm.includes('GREY') || rowNorm.includes('GRAY'))) score += 40;
+          if (nameNorm.includes('21 2101') && (rowNorm.includes('21 2101') || rowNorm.includes('212101'))) score += 50;
+
+          // Penalty: if catalog item does NOT have '2120' but the OCR line explicitly specifies '2120'
+          if (!nameNorm.includes('2120') && rowNorm.includes('2120')) score -= 50;
+
+          // Penalty: if catalog item is 'CE ENGLISH' but OCR line specifies 'KEYPAD' or '21-2101'
+          if (nameNorm.includes('CE') && (rowNorm.includes('KEYPAD') || rowNorm.includes('212101') || rowNorm.includes('21 2101'))) score -= 50;
+
+          if (score > highestScore && score >= 50) {
+            highestScore = score;
+            bestCheckbox = chk;
+          }
         }
-      }
+      });
 
-      if (isMatch) {
-        if (!chk.checked) {
-          chk.checked = true;
-          chk.dispatchEvent(new Event('change', { bubbles: true }));
-        }
+      if (bestCheckbox && !bestCheckbox.checked) {
+        bestCheckbox.checked = true;
+        bestCheckbox.dispatchEvent(new Event('change', { bubbles: true }));
         matchedCount++;
       }
     });
