@@ -108,6 +108,7 @@
   }
 
   let overlay = document.createElement("div");
+  overlay.id = "solis-calc-modal";
   overlay.style.cssText = "position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:99999;display:flex;align-items:center;justify-content:center;font-family:sans-serif;";
 
   let box = document.createElement("div");
@@ -181,7 +182,7 @@
     listContainer.innerHTML = "";
     
     let freq = getFreq();
-    // Sort dynamically by frequency (most frequently used items on top)
+    // Sort dynamically by frequency
     partsData.sort((a, b) => (freq[b.name] || 0) - (freq[a.name] || 0));
 
     partsData.forEach((p) => {
@@ -204,7 +205,6 @@
     });
   };
 
-  // Initial List Render from LocalStorage
   renderPartsList(getStoredParts());
 
   // 📤 Export Source (.js)
@@ -331,5 +331,60 @@
     } else {
       alert("Textarea not found. Findings copied to clipboard!");
     }
+  };
+
+  // --- AUTOMATED OCR AUTO-SELECT HANDLER FOR SOLIS (STRICT WORD-TO-WORD DESCRIPTION MATCHING) ---
+  window._otAutoSelectSolis = function(ocrText) {
+    if (!ocrText) return 0;
+
+    const cleanOCR = ocrText.toUpperCase();
+    let matchedCount = 0;
+
+    const checkboxes = box.querySelectorAll('.s_chk');
+
+    checkboxes.forEach(chk => {
+      const rawName = (chk.value || '').toUpperCase().trim();
+      
+      // Ignore Labor/Header rows
+      if (!rawName || chk.dataset.pn === 'LABOR' || rawName.includes("ONLY SELECT WHEN NOTHING ELSE")) return;
+
+      // Clean non-essential terms (e.g. CADD-SOLIS, 1/EA, RX ONLY, etc.) to extract primary description words
+      const cleanedName = rawName
+        .replace(/CADD-SOLIS/g, '')
+        .replace(/1\/EA/g, '')
+        .replace(/RX ONLY/g, '')
+        .replace(/MODEL \d+/g, '')
+        .replace(/3RD EDITION/g, '')
+        .replace(/[^A-Z0-9\s]/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim();
+
+      // Tokenize meaningful words (length >= 3)
+      const coreWords = cleanedName.split(' ').filter(w => w.length >= 3 && !['THE', 'FOR', 'AND', 'WITH', 'PUMP'].includes(w));
+
+      if (coreWords.length > 0) {
+        // Require ALL key words in the description to match the OCR text
+        const allWordsPresent = coreWords.every(w => {
+          const wordRegex = new RegExp(`(?:^|[^A-Z0-9])${w}(?:[^A-Z0-9]|$)`, 'i');
+          return wordRegex.test(cleanOCR);
+        });
+
+        if (allWordsPresent) {
+          if (!chk.checked) {
+            chk.checked = true;
+            chk.dispatchEvent(new Event('change', { bubbles: true }));
+          }
+          matchedCount++;
+        }
+      }
+    });
+
+    return matchedCount;
+  };
+
+  // Register with toolkit window observer
+  window._otCurrentOEMTool = {
+    id: 'solis',
+    autoSelect: window._otAutoSelectSolis
   };
 })();
