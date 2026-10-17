@@ -27,7 +27,7 @@
       const stored = localStorage.getItem('curlin_parts_list_v1');
       if (stored) return JSON.parse(stored);
     } catch(e) {}
-    localStorage.setItem('curlin_parts_list_v1', JSON.stringify(initialParts));
+    localStorage.setItem('curlin_parts_list_v1', JSON.stringify(listParts));
     return initialParts;
   }
 
@@ -119,7 +119,7 @@
     const partsList = getStoredParts();
     const freq = getFreq();
 
-    // 2. Sort parts dynamically by frequency (highest/most frequent usage on top)
+    // 2. Sort parts dynamically by frequency
     partsList.sort((a, b) => (freq[b.name] || 0) - (freq[a.name] || 0));
 
     partsList.forEach((p) => {
@@ -140,6 +140,7 @@
       checkbox.dataset.warranty = isW ? '1' : '0';
       checkbox.dataset.eval = p.isEval ? '1' : '0';
       checkbox.dataset.price = p.price || 0;
+      checkbox.dataset.pn = p.pn || 'N/A';
       checkbox.value = p.name;
       checkbox.style.cssText = 'transform:scale(1.1);cursor:pointer;';
 
@@ -257,5 +258,55 @@
     if (typeof window.openOneTrackToolkit === "function") {
       window.openOneTrackToolkit();
     }
+  };
+
+  // --- AUTOMATED OCR AUTO-SELECT HANDLER FOR CURLIN ---
+  window._otAutoSelectCurlin = function(ocrText) {
+    if (!ocrText) return 0;
+    const cleanOCR = ocrText.toUpperCase();
+    const alphaNumOCR = cleanOCR.replace(/[^A-Z0-9]/g, '');
+    let matchedCount = 0;
+
+    const checkboxes = modal.querySelectorAll('.c_chk');
+    checkboxes.forEach(chk => {
+      const pnAttr = (chk.dataset.pn || '').toUpperCase().trim();
+      if (!pnAttr || pnAttr === 'N/A') return;
+
+      // Handle split dual part numbers e.g. 360-1004/360-0091 or C14-05003/58553
+      const subPNs = pnAttr.split('/');
+      let matched = false;
+
+      for (let rawPN of subPNs) {
+        const cleanPN = rawPN.trim();
+        const alphaPN = cleanPN.replace(/[^A-Z0-9]/g, '');
+
+        if (cleanPN.length < 3) continue;
+
+        // Exact Token Boundary Matching
+        const escPN = cleanPN.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
+        const pnRegex = new RegExp(`(?:^|[^A-Z0-9])${escPN}(?:[^A-Z0-9]|$)`, 'i');
+
+        if (pnRegex.test(cleanOCR) || (alphaPN.length >= 5 && alphaNumOCR.includes(alphaPN))) {
+          matched = true;
+          break;
+        }
+      }
+
+      if (matched) {
+        if (!chk.checked) {
+          chk.checked = true;
+          chk.dispatchEvent(new Event('change', { bubbles: true }));
+        }
+        matchedCount++;
+      }
+    });
+
+    return matchedCount;
+  };
+
+  // Register with toolkit window observer
+  window._otCurrentOEMTool = {
+    id: 'curlin',
+    autoSelect: window._otAutoSelectCurlin
   };
 })();
