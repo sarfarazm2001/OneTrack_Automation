@@ -51,15 +51,16 @@
     { name: "KEYPAD, MEMBRANE SW, W/O CONN, CADD-SOLIS", pn: "70-0229" },
     { name: "LABEL, PUMP, REAR, CADD SOLIS VIP", pn: "10011174-001" },
     { name: "LATCH/LOCK", pn: "67-2482" },
-    { name: "LBL, DEVICE, PUMP, CADD-SOLIS, MODEL 2120, VIP, 3RD EDITION w CUL, BLUE, RX ONLY, COSTA RICA", pn: "10017410-001" },
-    { name: "LBL, DEVICE, PUMP, CADD-SOLIS, MODEL 2120, VIP, 3RD EDITION w CUL, BLUE, RX ONLY", pn: "10017410-001" },
-    { name: "LBL, DEVICE, PUMP, CADD-SOLIS, MODEL 2120, VIP, 3RD EDITION w CUL, DRK GREY, RX ONLY", pn: "10017409-001" },
+    { name: "LBL, DEVICE, PUMP, CADD-SOLIS, MODEL 2120, VIP, 3RD EDITION w cUL, BLUE, RX ONLY", pn: "10017410-001" },
+    { name: "LBL, DEVICE, PUMP, CADD-SOLIS, MODEL 2120, VIP, 3RD EDITION w cUL, BLUE, RX ONLY, COSTA RICA", pn: "10017410-001" },
+    { name: "LBL, DEVICE, PUMP, CADD-SOLIS, MODEL 2120, VIP, 3RD EDITION w cUL, DRK GREY, RX ONLY", pn: "10017409-001" },
     { name: "LBL, DEVICE, PUMP, CADD-SOLIS, VIP 1.2", pn: "10006271-002" },
     { name: "LBL, DEVICE, PUMP, CADD-SOLIS, VIP, BLACK", pn: "10012921-001" },
     { name: "LBL, DEVICE, PUMP, CADD-SOLIS, VIP, BLUE", pn: "10013249-001" },
     { name: "LBL, SET, DEVICE, CADD-SOLIS", pn: "40-6288-24A" },
     { name: "LENS, PAD PRINTED, CADD SOLIS", pn: "40-5733-51A" },
     { name: "NLT - HEADER, IDC, 5 POS", pn: "40-6288-24A" },
+    { name: "OVERLAY, MEMBRANE SWITCH (KEYPAD), CADD-SOLIS, 21-2101-08", pn: "21-2101-08" },
     { name: "OVERLAY, MEMBRANE SWITCH, CE ENGLISH", pn: "31-0993" },
     { name: "PAD, GND, L/L SENSOR", pn: "70-0171" },
     { name: "PCBA, CADD-SOLIS, FUSED", pn: "N/A" },
@@ -95,7 +96,6 @@
     localStorage.setItem("solis_parts_list_v1", JSON.stringify(list));
   }
 
-  // Frequency Storage & Recording Helpers
   function getFreq() {
     try { return JSON.parse(localStorage.getItem('ot_freq_solis') || '{}'); }
     catch(e) { return {}; }
@@ -182,7 +182,6 @@
     listContainer.innerHTML = "";
     
     let freq = getFreq();
-    // Sort dynamically by frequency
     partsData.sort((a, b) => (freq[b.name] || 0) - (freq[a.name] || 0));
 
     partsData.forEach((p) => {
@@ -207,7 +206,6 @@
 
   renderPartsList(getStoredParts());
 
-  // 📤 Export Source (.js)
   document.getElementById("s_export_btn").onclick = () => {
     const currentParts = getCurrentPartsFromDOM();
     const selfCode = runSolisCalc.toString();
@@ -229,7 +227,6 @@
     URL.revokeObjectURL(url);
   };
 
-  // 📥 Import Parts File (.js or .json)
   document.getElementById("s_import_btn").onclick = () => {
     document.getElementById("s_file_input").click();
   };
@@ -269,7 +266,6 @@
     reader.readAsText(file);
   };
 
-  // Add Part
   document.getElementById("s_add_btn").onclick = () => {
     let desc = document.getElementById("s_custom_desc").value.trim();
     let pn = document.getElementById("s_custom_pn").value.trim();
@@ -293,11 +289,8 @@
     }
   };
 
-  // Apply Findings
   document.getElementById("s_copy").onclick = () => {
     let checkedBoxes = Array.from(box.querySelectorAll(".s_chk:checked"));
-    
-    // Record frequency usage for every checked part
     checkedBoxes.forEach(cb => recordUsage(cb.value));
 
     let physicalParts = checkedBoxes.filter(cb => cb.dataset.pn !== "LABOR").map(cb => cb.value);
@@ -333,56 +326,75 @@
     }
   };
 
-  // --- AUTOMATED OCR AUTO-SELECT HANDLER FOR SOLIS (STRICT WORD-TO-WORD DESCRIPTION MATCHING) ---
+  // --- ENHANCED HIGH-PRECISION OCR AUTO-SELECT HANDLER FOR SOLIS ---
   window._otAutoSelectSolis = function(ocrText) {
     if (!ocrText) return 0;
 
-    const cleanOCR = ocrText.toUpperCase();
-    let matchedCount = 0;
+    // 1. Isolate the "Parts Replaced" table block to ignore left-hand PVT Test table
+    let partsSection = ocrText;
+    const partsMatch = ocrText.search(/PARTS\s*REPLACED/i);
+    if (partsMatch !== -1) {
+      partsSection = ocrText.substring(partsMatch);
+    }
 
+    // 2. Preprocess OCR: Fix hyphenated line wraps (e.g. CADD-\nSOLIS -> CADD-SOLIS)
+    let cleanOCR = partsSection
+      .toUpperCase()
+      .replace(/-\s*[\r\n]+\s*/g, '')
+      .replace(/[\r\n]+/g, ' ')
+      .replace(/[^A-Z0-9\s]/g, ' ')
+      .replace(/\s+/g, ' ');
+
+    let matchedCount = 0;
     const checkboxes = box.querySelectorAll('.s_chk');
 
     checkboxes.forEach(chk => {
       const rawName = (chk.value || '').toUpperCase().trim();
       
-      // Ignore Labor/Header rows
       if (!rawName || chk.dataset.pn === 'LABOR' || rawName.includes("ONLY SELECT WHEN NOTHING ELSE")) return;
 
-      // Clean non-essential terms (e.g. CADD-SOLIS, 1/EA, RX ONLY, etc.) to extract primary description words
+      // Handle label variant strict checks
+      const isCostaRicaItem = rawName.includes('COSTA RICA');
+      const ocrHasCostaRica = cleanOCR.includes('COSTA RICA');
+
+      if (isCostaRicaItem && !ocrHasCostaRica) return;
+      if (!isCostaRicaItem && rawName.includes('MODEL 2120') && ocrHasCostaRica) return;
+
+      // Tokenize part description signature words
       const cleanedName = rawName
         .replace(/CADD-SOLIS/g, '')
         .replace(/1\/EA/g, '')
-        .replace(/RX ONLY/g, '')
-        .replace(/MODEL \d+/g, '')
-        .replace(/3RD EDITION/g, '')
         .replace(/[^A-Z0-9\s]/g, ' ')
         .replace(/\s+/g, ' ')
         .trim();
 
-      // Tokenize meaningful words (length >= 3)
-      const coreWords = cleanedName.split(' ').filter(w => w.length >= 3 && !['THE', 'FOR', 'AND', 'WITH', 'PUMP'].includes(w));
+      const words = cleanedName.split(' ').filter(w => w.length >= 2 && !['THE', 'FOR', 'AND', 'WITH', 'PUMP'].includes(w));
 
-      if (coreWords.length > 0) {
-        // Require ALL key words in the description to match the OCR text
-        const allWordsPresent = coreWords.every(w => {
-          const wordRegex = new RegExp(`(?:^|[^A-Z0-9])${w}(?:[^A-Z0-9]|$)`, 'i');
-          return wordRegex.test(cleanOCR);
-        });
+      if (words.length === 0) return;
 
-        if (allWordsPresent) {
-          if (!chk.checked) {
-            chk.checked = true;
-            chk.dispatchEvent(new Event('change', { bubbles: true }));
-          }
-          matchedCount++;
+      let foundWords = 0;
+      words.forEach(w => {
+        const wordRegex = new RegExp(`(?:^|\\s)${w}(?:\\s|$)`, 'i');
+        if (wordRegex.test(cleanOCR)) {
+          foundWords++;
         }
+      });
+
+      const matchRatio = foundWords / words.length;
+      const requiredRatio = words.length <= 3 ? 1.0 : 0.8;
+
+      if (matchRatio >= requiredRatio) {
+        if (!chk.checked) {
+          chk.checked = true;
+          chk.dispatchEvent(new Event('change', { bubbles: true }));
+        }
+        matchedCount++;
       }
     });
 
     return matchedCount;
   };
 
-  // Register with toolkit window observer
   window._otCurrentOEMTool = {
     id: 'solis',
     autoSelect: window._otAutoSelectSolis
