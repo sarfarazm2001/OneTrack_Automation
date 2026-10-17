@@ -112,7 +112,7 @@
     const partsList = getStoredParts();
     const freq = getFreq();
 
-    // 2. Sort parts dynamically by frequency (most frequently used items on top)
+    // 2. Sort parts dynamically by frequency
     partsList.sort((a, b) => (freq[b.name] || 0) - (freq[a.name] || 0));
 
     partsList.forEach((p) => {
@@ -128,6 +128,7 @@
       checkbox.type = 'checkbox';
       checkbox.className = 'inf_part';
       checkbox.dataset.eval = p.isEval ? '1' : '0';
+      checkbox.dataset.pn = p.pn || 'N/A';
       checkbox.value = p.customName || p.name;
       checkbox.style.cssText = 'transform:scale(1.1);cursor:pointer;';
       
@@ -248,5 +249,54 @@
     if (typeof window.openOneTrackToolkit === "function") {
       window.openOneTrackToolkit();
     }
+  };
+
+  // --- AUTOMATED OCR AUTO-SELECT HANDLER FOR INFINITY ---
+  window._otAutoSelectInfinity = function(ocrText) {
+    if (!ocrText) return 0;
+    const cleanOCR = ocrText.toUpperCase();
+    const alphaNumOCR = cleanOCR.replace(/[^A-Z0-9]/g, '');
+    let matchedCount = 0;
+
+    const checkboxes = modal.querySelectorAll('.inf_part');
+    checkboxes.forEach(chk => {
+      const pnAttr = (chk.dataset.pn || '').toUpperCase().trim();
+      if (!pnAttr || pnAttr === 'N/A' || chk.dataset.eval === '1') return;
+
+      // Handle split dual part numbers e.g. 26542-001/80786-001 or 56717-001/80782-001
+      const subPNs = pnAttr.split('/');
+      let matched = false;
+
+      for (let rawPN of subPNs) {
+        const cleanPN = rawPN.trim();
+        const alphaPN = cleanPN.replace(/[^A-Z0-9]/g, '');
+
+        if (cleanPN.length < 3) continue;
+
+        const escPN = cleanPN.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
+        const pnRegex = new RegExp(`(?:^|[^A-Z0-9])${escPN}(?:[^A-Z0-9]|$)`, 'i');
+
+        if (pnRegex.test(cleanOCR) || (alphaPN.length >= 5 && alphaNumOCR.includes(alphaPN))) {
+          matched = true;
+          break;
+        }
+      }
+
+      if (matched) {
+        if (!chk.checked) {
+          chk.checked = true;
+          chk.dispatchEvent(new Event('change', { bubbles: true }));
+        }
+        matchedCount++;
+      }
+    });
+
+    return matchedCount;
+  };
+
+  // Register with toolkit window observer
+  window._otCurrentOEMTool = {
+    id: 'infinity',
+    autoSelect: window._otAutoSelectInfinity
   };
 })();
