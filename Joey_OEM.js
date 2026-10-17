@@ -137,6 +137,7 @@
       const checkbox = document.createElement("input");
       checkbox.type = "checkbox";
       checkbox.className = "j_chk";
+      checkbox.dataset.pn = p.pn || "N/A";
       checkbox.value = p.name;
       checkbox.style.cssText = "transform:scale(1.1);cursor:pointer;";
 
@@ -246,5 +247,52 @@
     if (typeof window.openOneTrackToolkit === "function") {
       window.openOneTrackToolkit();
     }
+  };
+
+  // --- AUTOMATED OCR AUTO-SELECT HANDLER FOR JOEY OEM ---
+  window._otAutoSelectJoeyOEM = function(ocrText) {
+    if (!ocrText) return 0;
+    const cleanOCR = ocrText.toUpperCase();
+    const alphaNumOCR = cleanOCR.replace(/[^A-Z0-9]/g, '');
+    let matchedCount = 0;
+
+    const checkboxes = overlay.querySelectorAll('.j_chk');
+    checkboxes.forEach(chk => {
+      const pnAttr = (chk.dataset.pn || '').toUpperCase().trim();
+      if (!pnAttr || pnAttr === 'N/A') return;
+
+      // Base Part Number stripping optional CS or CX suffix (e.g., F319275CS -> F319275)
+      const basePN = pnAttr.replace(/(CS|CX)$/i, '');
+      if (basePN.length < 3) return;
+
+      let matched = false;
+
+      // Match base PN or full raw PN against OCR text using strict boundaries
+      const escBase = basePN.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
+      const escRaw = pnAttr.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
+      const pnRegex = new RegExp(`(?:^|[^A-Z0-9])(?:${escBase}|${escRaw})(?:[^A-Z0-9]|$)`, 'i');
+
+      const alphaBase = basePN.replace(/[^A-Z0-9]/g, '');
+
+      if (pnRegex.test(cleanOCR) || (alphaBase.length >= 5 && alphaNumOCR.includes(alphaBase))) {
+        matched = true;
+      }
+
+      if (matched) {
+        if (!chk.checked) {
+          chk.checked = true;
+          chk.dispatchEvent(new Event('change', { bubbles: true }));
+        }
+        matchedCount++;
+      }
+    });
+
+    return matchedCount;
+  };
+
+  // Register with toolkit window observer
+  window._otCurrentOEMTool = {
+    id: 'joey_oem',
+    autoSelect: window._otAutoSelectJoeyOEM
   };
 })();
