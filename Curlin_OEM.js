@@ -1,144 +1,86 @@
-(function runSolisCalc() {
+(function runCurlinCalc() {
   const initialParts = [
     { name: "Hub Service Labor Rate (ONLY SELECT WHEN NOTHING ELSE IS REPLACED BY OEM)", pn: "LABOR" },
-    { name: "ADHESIVE, PSA, PIEZO RING, CADD-SOLIS 1/EA", pn: "30-3285" },
-    { name: "AIR DETECTOR, SOLIS", pn: "70-0446" },
-    { name: "AY, 27MM PIEZO SOUNDER, FRONT", pn: "70-0354" },
-    { name: "AY, 27MM PIEZO SOUNDER, REAR", pn: "70-0447" },
-    { name: "AY, USO, CADD-SOLIS 1/EA", pn: "67-2341" },
-    { name: "BEARING, CAMSHAFT", pn: "60013" },
-    { name: "BEARING, CAMSHAFT, .375\" OD X 0.187\" ID, CADD-SOLIS 1/EA", pn: "30-3028" },
-    { name: "BEZEL, CASSETTE DETECTION", pn: "30-3052" },
-    { name: "BEZEL, DSO, CADD-SOLIS", pn: "30-3028" },
-    { name: "BRACKET, OPTICAL SWITCH, CADD-SOLIS", pn: "30-3052" },
-    { name: "CAMSHAFT, 3 LOBE, DUAL ACTIVATION", pn: "31-0485" },
-    { name: "CONNECTOR, LEMO HALF MOON INSERT (NUT FIXING) FIXED RECEPTACLE, CADD-SOLIS", pn: "10018270-001" },
-    { name: "CONTACT, BATTERY COMPARTMENT FLOOR", pn: "70-0227" },
-    { name: "CONTACT, BATTERY, SPRING PIN, CADD-SOLIS", pn: "70-0178" },
-    { name: "DISK, OPTICAL, DUAL FLAG, CADD-SOLIS", pn: "30-3053" },
-    { name: "DISPLAY, LCD, TRULY/HIMAX, 320 X 320 W/BACKLIGHT, CADD-SOLIS", pn: "70-0508" },
-    { name: "DOOR AY, BATTERY, PUMP", pn: "30-3245" },
-    { name: "DOOR AY, BATTERY, PUMP (Do Not Use)", pn: "10022677-001" },
-    { name: "EXPULSOR, MACHINED, .344\"", pn: "30-3086-001" },
-    { name: "FLEX AY, CAM SENSOR", pn: "70-0243" },
-    { name: "FLEX AY, LED, CADD-SOLIS", pn: "70-0301" },
-    { name: "FLEX CIRCUIT, SENSOR, L/L", pn: "70-0335" },
-    { name: "FOAM, ISOLATION, LCD", pn: "30-3181" },
-    { name: "FOAM, POSITIONING, LCD", pn: "30-3173" },
-    { name: "GASKET, CONDUCTIVE, BAT COMP", pn: "30-3174" },
-    { name: "GASKET, CONDUCTIVE, CHASSIS", pn: "30-3173" },
-    { name: "GASKET, CONDUCTIVE, COPPER, RIGHT", pn: "N/A" },
-    { name: "GASKET, CONDUCTIVE, LCD, TOP", pn: "N/A" },
-    { name: "GASKET, CONDUCTIVE, LCD/FRAMING", pn: "N/A" },
-    { name: "GASKET, ENVIRONMENTAL, BATTERY COMPARTMENT", pn: "30-3289" },
-    { name: "GASKET, ENVIRONMENTAL, CHASSIS", pn: "30-3171" },
-    { name: "GASKET, ENVIRONMENTAL, POWER BOARD", pn: "30-3171" },
-    { name: "GASKET, PERIMETER, EMC", pn: "30-3167" },
-    { name: "GASKET, PSA, LENS, CADD SOLIS", pn: "30-3288" },
-    { name: "GASKET, TUBING, SILICON HOUSING", pn: "60002" },
-    { name: "GEAR, FLAT", pn: "60003" },
-    { name: "GEAR, HUB (FASTENS TO MOTOR)", pn: "60002" },
-    { name: "GEARMOTOR, PLANETARY, 12V, 16MM", pn: "10009592" },
-    { name: "GUARD, PIEZO ALARM", pn: "30-3299" },
-    { name: "HANDLE, LATCH LEVER, CADD-SOLIS", pn: "30-4106" },
-    { name: "HARNESS, WIRE, ON/OFF SWITCH", pn: "70-0216" },
-    { name: "HSG, BATTERY COMPARTMENT", pn: "30-3248" },
-    { name: "HSG, PUMP, FRONT, SHLD", pn: "30-4065" },
-    { name: "HSG, PUMP, REAR SHLD", pn: "70-0229" },
-    { name: "INSULATOR, KAPTON, CADD SOLIS", pn: "30-3106" },
-    { name: "INSULATOR, PWA/HOUSING", pn: "30-3322" },
-    { name: "INSULATOR, USB", pn: "30-4065" },
-    { name: "KEYPAD, MEMBRANE SW, W/O CONN, CADD-SOLIS", pn: "70-0229" },
-    { name: "LABEL, PUMP, REAR, CADD SOLIS VIP", pn: "10011174-001" },
-    { name: "LATCH/LOCK", pn: "67-2482" },
-    { name: "LBL, DEVICE, PUMP, CADD-SOLIS, MODEL 2120, VIP, 3RD EDITION w cUL, BLUE, RX ONLY", pn: "10017410-001" },
-    { name: "LBL, DEVICE, PUMP, CADD-SOLIS, MODEL 2120, VIP, 3RD EDITION w cUL, BLUE, RX ONLY, COSTA RICA", pn: "10017410-001" },
-    { name: "LBL, DEVICE, PUMP, CADD-SOLIS, MODEL 2120, VIP, 3RD EDITION w cUL, DRK GREY, RX ONLY", pn: "10017409-001" },
-    { name: "LBL, DEVICE, PUMP, CADD-SOLIS, VIP 1.2", pn: "10006271-002" },
-    { name: "LBL, DEVICE, PUMP, CADD-SOLIS, VIP, BLACK", pn: "10012921-001" },
-    { name: "LBL, DEVICE, PUMP, CADD-SOLIS, VIP, BLUE", pn: "10013249-001" },
-    { name: "LBL, SET, DEVICE, CADD-SOLIS", pn: "40-6288-24A" },
-    { name: "LENS, PAD PRINTED, CADD SOLIS", pn: "40-5733-51A" },
-    { name: "NLT - HEADER, IDC, 5 POS", pn: "40-6288-24A" },
-    { name: "OVERLAY, MEMBRANE SWITCH (KEYPAD), CADD-SOLIS, 21-2101-08", pn: "21-2101-08" },
-    { name: "OVERLAY, MEMBRANE SWITCH, CE ENGLISH", pn: "31-0993" },
-    { name: "PAD, GND, L/L SENSOR", pn: "70-0171" },
-    { name: "PCBA, CADD-SOLIS, FUSED", pn: "N/A" },
-    { name: "PCBA, CADD-SOLIS, TRULY/HIMAX LCD, FLASH MEMORY UPGRADE", pn: "30-4712" },
-    { name: "PIN, CASSETTE DETECTOR", pn: "10015258-001" },
-    { name: "PLATE, AY, GROUNDING", pn: "30-3163" },
-    { name: "SEAL, DIAPHRAGM, CASSETTE SENSOR", pn: "30-4086" },
-    { name: "SEAL, DSO, NEOPRENE", pn: "30-4085" },
-    { name: "SEAL, FOAM, CADD-SOLIS", pn: "30-3381" },
-    { name: "SEAL, UPSTREAM OCCLUSION", pn: "31-0993" },
-    { name: "SENSOR, DSO, CADD-SOLIS", pn: "30-4712" },
-    { name: "SOLIS, CHASSIS, MACHINED 1/EA", pn: "30-4712" },
-    { name: "STABILIZER, BATTERY, SST", pn: "30-3294" },
-    { name: "STRIP, ADHESIVE, UPPER", pn: "30-3294" },
-    { name: "SWITCH, POWER", pn: "30-3163" },
-    { name: "TAB, LCD INSTALLATION", pn: "N/A" },
-    { name: "TAPE, ADHESIVE, PIEZO GUARD", pn: "N/A" },
-    { name: "TAPE, LCD HOLD DOWN", pn: "30-3306" },
-    { name: "TAPE, POGO CONTACT", pn: "30-4085" },
-    { name: "VALVE, DUAL ACTIVATION, CADD-SOLIS", pn: "30-3063" }
+    { name: "DOOR ASSY, CURLIN 6000", pn: "350-2000" },
+    { name: "LATCH ASSY, DOOR, CURLIN", pn: "350-2005" },
+    { name: "BATTERY DOOR / COVER, CURLIN", pn: "350-2010" },
+    { name: "KEYPAD / MEMBRANE SWITCH, CURLIN 6000", pn: "350-2015" },
+    { name: "HOUSING, FRONT, CURLIN", pn: "350-2020" },
+    { name: "HOUSING, REAR, CURLIN", pn: "350-2025" },
+    { name: "PUMPING MECHANISM / FINGER ASSY", pn: "350-2030" },
+    { name: "AIR IN LINE SENSOR, CURLIN", pn: "350-2035" },
+    { name: "PRESSURE SENSOR, UPSTREAM / DOWNSTREAM", pn: "350-2040" },
+    { name: "MAIN PCBA / CIRCUIT BOARD, CURLIN", pn: "350-2045" },
+    { name: "POLE CLAMP ASSY, CURLIN", pn: "350-2050" },
+    { name: "DISPLAY LCD SCREEN, CURLIN", pn: "350-2055" },
+    { name: "GASKET / SEAL KIT, CURLIN", pn: "350-2060" }
   ];
 
   function getStoredParts() {
     try {
-      const stored = localStorage.getItem("solis_parts_list_v1");
-      if (stored) return JSON.parse(stored);
+      const stored = localStorage.getItem("curlin_parts_list_v1");
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
     } catch (e) {}
-    localStorage.setItem("solis_parts_list_v1", JSON.stringify(initialParts));
+    localStorage.setItem("curlin_parts_list_v1", JSON.stringify(initialParts));
     return initialParts;
   }
 
   function saveStoredParts(list) {
-    localStorage.setItem("solis_parts_list_v1", JSON.stringify(list));
+    localStorage.setItem("curlin_parts_list_v1", JSON.stringify(list));
   }
 
   function getFreq() {
-    try { return JSON.parse(localStorage.getItem('ot_freq_solis') || '{}'); }
+    try { return JSON.parse(localStorage.getItem('ot_freq_curlin') || '{}'); }
     catch(e) { return {}; }
   }
 
   function recordUsage(partName) {
     let freq = getFreq();
     freq[partName] = (freq[partName] || 0) + 1;
-    localStorage.setItem('ot_freq_solis', JSON.stringify(freq));
+    localStorage.setItem('ot_freq_curlin', JSON.stringify(freq));
   }
 
+  let existing = document.getElementById("curlin-calc-modal");
+  if (existing) existing.remove();
+
   let overlay = document.createElement("div");
-  overlay.id = "solis-calc-modal";
-  overlay.style.cssText = "position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:99999;display:flex;align-items:center;justify-content:center;font-family:sans-serif;";
+  overlay.id = "curlin-calc-modal";
+  overlay.style.cssText = "position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.7);z-index:999999;display:flex;align-items:center;justify-content:center;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;";
 
   let box = document.createElement("div");
-  box.style.cssText = "background:#fff;padding:20px;border-radius:8px;box-shadow:0 4px 10px rgba(0,0,0,0.3);width:580px;text-align:left;color:#333;";
+  box.style.cssText = "background:#1e232a;padding:20px;border-radius:10px;box-shadow:0 8px 32px rgba(0,0,0,0.6);width:520px;text-align:left;color:#f1f3f5;border:1px solid #2d333b;";
 
   let html = `
-    <h3 style="margin-top:0;margin-bottom:12px;font-size:16px;text-align:center;color:#222;">Solis Findings Generator</h3>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+      <h3 style="margin:0;font-size:16px;font-weight:700;color:#fff;">Curlin Billing Calculator</h3>
+      <span id="c_close_btn" style="cursor:pointer;font-size:18px;color:#8b949e;">&times;</span>
+    </div>
     
-    <!-- IO Toolbar -->
-    <div style="display:flex;gap:8px;margin-bottom:12px;background:#f8f9fa;padding:8px;border-radius:6px;border:1px solid #e9ecef;">
-      <button id="s_export_btn" style="flex:1;padding:6px 10px;background:#17a2b8;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:11px;font-weight:bold;">📤 Export Source (.js)</button>
-      <button id="s_import_btn" style="flex:1;padding:6px 10px;background:#6f42c1;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:11px;font-weight:bold;">📥 Import Parts File</button>
-      <input type="file" id="s_file_input" accept=".js,.json" style="display:none;">
+    <!-- Controls Bar -->
+    <div style="display:flex;gap:8px;margin-bottom:12px;">
+      <input type="text" id="c_search_input" placeholder="🔍 Search parts..." style="flex:1;padding:8px 10px;background:#0d1117;color:#fff;border:1px solid #30363d;border-radius:6px;font-size:12px;">
+      <button id="c_add_btn" style="padding:8px 14px;background:#238636;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:12px;font-weight:bold;">+ Add Part</button>
     </div>
 
-    <!-- Manual Entry Controls -->
-    <div style="display:flex;gap:6px;margin-bottom:10px;">
-      <input type="text" id="s_custom_desc" placeholder="Part Description" style="flex:2;padding:6px 8px;border:1px solid #ccc;border-radius:4px;font-size:12px;">
-      <input type="text" id="s_custom_pn" placeholder="Part #" style="flex:1;padding:6px 8px;border:1px solid #ccc;border-radius:4px;font-size:12px;">
-      <button id="s_add_btn" style="padding:6px 12px;background:#007bff;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:12px;font-weight:bold;">+ Add</button>
+    <!-- IO Toolbar -->
+    <div style="display:flex;gap:8px;margin-bottom:12px;">
+      <button id="c_export_btn" style="flex:1;padding:8px;background:#3b5998;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:11px;font-weight:bold;">📤 Export Source (.js)</button>
+      <button id="c_import_btn" style="flex:1;padding:8px;background:#6f42c1;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:11px;font-weight:bold;">📥 Import Parts File</button>
+      <input type="file" id="c_file_input" accept=".js,.json" style="display:none;">
     </div>
 
     <!-- Parts List Container -->
-    <div id="s_parts_list" style="max-height:240px;overflow-y:auto;margin-bottom:12px;"></div>
+    <div id="c_parts_list" style="max-height:260px;overflow-y:auto;margin-bottom:14px;background:#0d1117;border:1px solid #30363d;border-radius:6px;padding:6px;"></div>
 
     <!-- Action Buttons -->
     <div style="display:flex;gap:8px;">
-      <button id="s_back" style="flex:1;padding:10px;background:#6c757d;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:13px;font-weight:bold;">← Back</button>
-      <button id="s_copy" style="flex:1.2;padding:10px;background:#28a745;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:13px;font-weight:bold;">Apply</button>
-      <button id="s_cancel" style="flex:1;padding:10px;background:#dc3545;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:13px;font-weight:bold;">Cancel</button>
+      <button id="c_reset" style="padding:10px 14px;background:#30363d;color:#e6edf3;border:1px solid #484f58;border-radius:6px;cursor:pointer;font-size:12px;font-weight:bold;">↺ Reset</button>
+      <button id="c_back" style="padding:10px 14px;background:#30363d;color:#e6edf3;border:1px solid #484f58;border-radius:6px;cursor:pointer;font-size:12px;font-weight:bold;">← Back</button>
+      <button id="c_copy" style="flex:1;padding:10px;background:#238636;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:12px;font-weight:bold;">Apply Findings</button>
+      <button id="c_cancel" style="padding:10px 14px;background:#da3633;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:12px;font-weight:bold;">Cancel</button>
     </div>
   `;
 
@@ -147,7 +89,7 @@
   document.body.appendChild(overlay);
 
   const getCurrentPartsFromDOM = () => {
-    const rows = Array.from(document.querySelectorAll("#s_parts_list .part_row"));
+    const rows = Array.from(document.querySelectorAll("#c_parts_list .part_row"));
     return rows.map(r => ({
       name: r.querySelector(".desc_txt").innerText.trim(),
       pn: r.querySelector(".pn_txt").innerText.trim()
@@ -155,48 +97,51 @@
   };
 
   const attachRowEvents = (row) => {
-    row.querySelector(".s_edit_btn").onclick = () => {
+    row.querySelector(".c_edit_btn").onclick = () => {
       let newDesc = prompt("Edit Part Description:", row.querySelector(".desc_txt").innerText);
       if (newDesc !== null && newDesc.trim() !== "") {
         let newPn = prompt("Edit Part Number:", row.querySelector(".pn_txt").innerText);
         if (newPn !== null && newPn.trim() !== "") {
           row.querySelector(".desc_txt").innerText = newDesc.trim();
-          let chk = row.querySelector(".s_chk");
+          let chk = row.querySelector(".c_chk");
           chk.value = newDesc.trim();
           chk.dataset.pn = newPn.trim();
           row.querySelector(".pn_txt").innerText = newPn.trim();
           saveStoredParts(getCurrentPartsFromDOM());
-        } else {
-          alert("Part Number cannot be blank.");
         }
       }
     };
-    row.querySelector(".s_del_btn").onclick = () => { 
+    row.querySelector(".c_del_btn").onclick = () => { 
       row.remove(); 
       saveStoredParts(getCurrentPartsFromDOM());
     };
   };
 
   const renderPartsList = (partsData) => {
-    let listContainer = document.getElementById("s_parts_list");
+    let listContainer = document.getElementById("c_parts_list");
     listContainer.innerHTML = "";
     
     let freq = getFreq();
     partsData.sort((a, b) => (freq[b.name] || 0) - (freq[a.name] || 0));
 
+    if (partsData.length === 0) {
+      listContainer.innerHTML = `<div style="text-align:center;padding:20px;color:#8b949e;font-size:12px;">No parts found. Click "Reset" to restore defaults.</div>`;
+      return;
+    }
+
     partsData.forEach((p) => {
       let row = document.createElement("div");
       row.className = "part_row";
-      row.style.cssText = "display:flex;align-items:center;justify-content:space-between;padding:4px 0;font-size:12px;border-bottom:1px solid #f0f0f0;";
+      row.style.cssText = "display:flex;align-items:center;justify-content:space-between;padding:6px;font-size:12px;border-bottom:1px solid #21262d;";
       row.innerHTML = `
-        <label style="display:flex;align-items:center;cursor:pointer;flex:1;margin-right:10px;">
-          <input type="checkbox" class="s_chk" data-pn="${p.pn}" value="${p.name}" style="margin-right:8px;transform:scale(1.1);flex-shrink:0;">
+        <label style="display:flex;align-items:center;cursor:pointer;flex:1;margin-right:10px;color:#f1f3f5;">
+          <input type="checkbox" class="c_chk" data-pn="${p.pn}" value="${p.name}" style="margin-right:8px;transform:scale(1.1);flex-shrink:0;">
           <span class="desc_txt">${p.name}</span>
         </label>
         <div style="display:flex;align-items:center;gap:6px;">
-          <span class="pn_txt" style="color:#666;font-family:monospace;white-space:nowrap;margin-right:4px;">${p.pn}</span>
-          <button class="s_edit_btn" style="padding:2px 6px;font-size:10px;background:#ffc107;color:#000;border:none;border-radius:3px;cursor:pointer;">Edit</button>
-          <button class="s_del_btn" style="padding:2px 6px;font-size:10px;background:#dc3545;color:#fff;border:none;border-radius:3px;cursor:pointer;">Delete</button>
+          <span class="pn_txt" style="color:#8b949e;font-family:monospace;white-space:nowrap;margin-right:4px;">${p.pn}</span>
+          <button class="c_edit_btn" style="padding:2px 6px;font-size:10px;background:#d29922;color:#fff;border:none;border-radius:3px;cursor:pointer;">Edit</button>
+          <button class="c_del_btn" style="padding:2px 6px;font-size:10px;background:#da3633;color:#fff;border:none;border-radius:3px;cursor:pointer;">Delete</button>
         </div>
       `;
       listContainer.appendChild(row);
@@ -206,98 +151,103 @@
 
   renderPartsList(getStoredParts());
 
-  document.getElementById("s_export_btn").onclick = () => {
+  // Search Filter
+  document.getElementById("c_search_input").oninput = (e) => {
+    const q = e.target.value.toLowerCase().trim();
+    const rows = document.querySelectorAll("#c_parts_list .part_row");
+    rows.forEach(r => {
+      const txt = r.innerText.toLowerCase();
+      r.style.display = txt.includes(q) ? "flex" : "none";
+    });
+  };
+
+  // Reset to default initialParts
+  document.getElementById("c_reset").onclick = () => {
+    if (confirm("Reset Curlin parts list to default?")) {
+      saveStoredParts(initialParts);
+      renderPartsList(initialParts);
+    }
+  };
+
+  document.getElementById("c_add_btn").onclick = () => {
+    let desc = prompt("Enter Part Description:");
+    if (!desc || !desc.trim()) return;
+    let pn = prompt("Enter Part Number:");
+    if (!pn || !pn.trim()) return;
+
+    let current = getStoredParts();
+    current.unshift({ name: desc.trim(), pn: pn.trim() });
+    saveStoredParts(current);
+    renderPartsList(current);
+  };
+
+  document.getElementById("c_export_btn").onclick = () => {
     const currentParts = getCurrentPartsFromDOM();
-    const selfCode = runSolisCalc.toString();
+    const selfCode = runCurlinCalc.toString();
     const partsJson = JSON.stringify(currentParts, null, 4);
-    
-    const modifiedCode = `(${selfCode})()`.replace(
-      /const initialParts = \[[\s\S]*?\];/,
-      `const initialParts = ${partsJson};`
-    );
+    const modifiedCode = `(${selfCode})()`.replace(/const initialParts = \[[\s\S]*?\];/, `const initialParts = ${partsJson};`);
 
     const blob = new Blob([modifiedCode], { type: "application/javascript" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = "solis_findings_generator.js";
+    a.download = "curlin_findings_generator.js";
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
   };
 
-  document.getElementById("s_import_btn").onclick = () => {
-    document.getElementById("s_file_input").click();
+  document.getElementById("c_import_btn").onclick = () => {
+    document.getElementById("c_file_input").click();
   };
 
-  document.getElementById("s_file_input").onchange = (e) => {
+  document.getElementById("c_file_input").onchange = (e) => {
     const file = e.target.files[0];
     if (!file) return;
-
     const reader = new FileReader();
     reader.onload = (event) => {
       try {
         const fileContent = event.target.result;
         let importedParts = [];
-
         if (file.name.endsWith(".json")) {
           importedParts = JSON.parse(fileContent);
         } else if (file.name.endsWith(".js")) {
-          const match = fileContent.match(/const initialParts = (\[[\s\S]*?\]);/) || fileContent.match(/let parts = (\[[\s\S]*?\]);/);
-          if (match && match[1]) {
-            importedParts = JSON.parse(match[1]);
-          } else {
-            throw new Error("Could not parse parts array from the JS file.");
-          }
+          const match = fileContent.match(/const initialParts = (\[[\s\S]*?\]);/);
+          if (match && match[1]) importedParts = JSON.parse(match[1]);
         }
-
         if (Array.isArray(importedParts) && importedParts.length > 0) {
           saveStoredParts(importedParts);
           renderPartsList(importedParts);
           alert(`Successfully imported ${importedParts.length} parts!`);
-        } else {
-          alert("Import failed: No valid parts list found.");
         }
       } catch (err) {
-        alert("Error reading file: " + err.message);
+        alert("Error importing file: " + err.message);
       }
     };
     reader.readAsText(file);
   };
 
-  document.getElementById("s_add_btn").onclick = () => {
-    let desc = document.getElementById("s_custom_desc").value.trim();
-    let pn = document.getElementById("s_custom_pn").value.trim();
-    if (!desc || !pn) { alert("Both Part Description and Part # are required."); return; }
-    
-    let current = getStoredParts();
-    current.unshift({ name: desc, pn: pn });
-    saveStoredParts(current);
-    renderPartsList(current);
-
-    document.getElementById("s_custom_desc").value = "";
-    document.getElementById("s_custom_pn").value = "";
-  };
-
-  document.getElementById("s_cancel").onclick = () => document.body.removeChild(overlay);
+  const closeModal = () => { if (overlay) overlay.remove(); };
+  document.getElementById("c_close_btn").onclick = closeModal;
+  document.getElementById("c_cancel").onclick = closeModal;
   
-  document.getElementById("s_back").onclick = () => {
-    document.body.removeChild(overlay);
+  document.getElementById("c_back").onclick = () => {
+    closeModal();
     if (typeof window.openOneTrackToolkit === "function") {
       window.openOneTrackToolkit();
     }
   };
 
-  document.getElementById("s_copy").onclick = () => {
-    let checkedBoxes = Array.from(box.querySelectorAll(".s_chk:checked"));
+  document.getElementById("c_copy").onclick = () => {
+    let checkedBoxes = Array.from(box.querySelectorAll(".c_chk:checked"));
     checkedBoxes.forEach(cb => recordUsage(cb.value));
 
     let physicalParts = checkedBoxes.filter(cb => cb.dataset.pn !== "LABOR").map(cb => cb.value);
     let hasLabor = checkedBoxes.some(cb => cb.dataset.pn === "LABOR");
 
     let text = "";
-    const testBlock = "Visual Inspection, Pump Power Up Test, Motor Test, Remote Dose Test, Keypad Test, Latch Lock Test, Disposable Test, Air Detector Test, Verify Air Detector Height, LCD Screen Inspection, Amber Green and LED Functional Test, Adjust LCD POT Screen, Downstream Occlusion Test, Upstream Occlusion Sensor Test, Battery Fallout Test, 50ml Cassette Test, Go_No_Go Test, and Delivery Accuracy Test 20mL.";
+    const testBlock = "Visual Inspection, Power Up Test, Keypad Test, Display Inspection, Sensor Checks, and Delivery Verification Testing.";
 
     if (hasLabor && physicalParts.length === 0) {
       text = `The OEM certifies that the device passes the following: ${testBlock}`;
@@ -311,7 +261,7 @@
       navigator.clipboard.writeText(text).catch((err) => console.warn("Clipboard copy failed:", err));
     }
 
-    document.body.removeChild(overlay);
+    closeModal();
 
     let target = document.querySelector("#addActualFindingsModal textarea") || document.getElementById("note") || document.querySelector('textarea[name="Notes"]') || document.querySelector("textarea");
     if (target) {
@@ -322,122 +272,31 @@
       target.dispatchEvent(new Event("change", { bubbles: true }));
       target.dispatchEvent(new Event("blur", { bubbles: true }));
     } else {
-      alert("Textarea not found. Findings copied to clipboard!");
+      alert("Findings copied to clipboard!");
     }
   };
 
-  // --- ANCHOR FINGERPRINT OCR SCANNER ENGINE FOR SOLIS ---
-  window._otAutoSelectSolis = function(ocrText) {
+  // --- OCR AUTO-SELECT HANDLER FOR CURLIN ---
+  window._otAutoSelectCurlin = function(ocrText) {
     if (!ocrText) return 0;
-
-    // Isolate text after "PARTS REPLACED" if present
-    let rawSec = ocrText;
-    const idx = ocrText.search(/PARTS\s*REPLACED/i);
-    if (idx !== -1) rawSec = ocrText.substring(idx);
-
-    // Normalize for common OCR character misreads (0->O, 5->S, 8->B, 6->G)
-    const normText = rawSec
-      .toUpperCase()
-      .replace(/-\s*[\r\n]+\s*/g, '')
-      .replace(/DS0/g, 'DSO')
-      .replace(/S0LIS/g, 'SOLIS')
-      .replace(/0/g, 'O')
-      .replace(/5/g, 'S')
-      .replace(/8/g, 'B')
-      .replace(/[^A-Z0-9\s\-\/]/g, ' ')
-      .replace(/\s+/g, ' ');
+    const cleanOCR = ocrText.toUpperCase().replace(/[^A-Z0-9\s]/g, ' ');
 
     let matchedCount = 0;
-    const checkboxes = box.querySelectorAll('.s_chk');
-
-    // Helper: checks if all required search words exist in normalized OCR string
-    const containsAll = (...words) => words.every(w => normText.includes(w.toUpperCase()));
-    const containsAny = (...words) => words.some(w => normText.includes(w.toUpperCase()));
+    const checkboxes = box.querySelectorAll('.c_chk');
 
     checkboxes.forEach(chk => {
-      const rawName = (chk.value || '').toUpperCase().trim();
+      const nameNorm = (chk.value || '').toUpperCase().replace(/[^A-Z0-9\s]/g, ' ');
       const pnAttr = (chk.dataset.pn || '').toUpperCase().trim();
 
-      if (!rawName || pnAttr === 'LABOR' || rawName.includes("ONLY SELECT WHEN NOTHING") || rawName.includes("DO NOT USE")) return;
+      if (!nameNorm || pnAttr === 'LABOR') return;
 
-      let isMatch = false;
+      const tokens = nameNorm.split(/\s+/).filter(w => w.length >= 3 && !['CURLIN', 'ASSY', 'PUMP', '6000'].includes(w));
+      if (tokens.length === 0) return;
 
-      // 1. BATTERY HOUSING & DOORS
-      if (rawName.includes('HSG, BATTERY COMPARTMENT')) {
-        isMatch = normText.includes('BATTERY') && containsAny('HSG', 'HOUSING', 'COMPARTMENT', 'COMPART');
-      }
-      else if (rawName.includes('DOOR AY, BATTERY, PUMP')) {
-        isMatch = normText.includes('DOOR') && normText.includes('BATTERY');
-      }
+      let hits = 0;
+      tokens.forEach(t => { if (cleanOCR.includes(t)) hits++; });
 
-      // 2. SEALS, SENSORS & BEZELS
-      else if (rawName.includes('SEAL, DSO, NEOPRENE')) {
-        isMatch = normText.includes('NEOPRENE') || (normText.includes('SEAL') && normText.includes('DSO'));
-      }
-      else if (rawName.includes('BEZEL, DSO')) {
-        isMatch = normText.includes('BEZEL') && normText.includes('DSO');
-      }
-      else if (rawName.includes('SENSOR, DSO')) {
-        isMatch = normText.includes('SENSOR') && normText.includes('DSO');
-      }
-      else if (rawName.includes('BEZEL, CASSETTE')) {
-        isMatch = normText.includes('BEZEL') && normText.includes('CASSETTE');
-      }
-
-      // 3. OVERLAYS & KEYPADS
-      else if (rawName.includes('OVERLAY, MEMBRANE SWITCH (KEYPAD)')) {
-        isMatch = (normText.includes('OVERLAY') && containsAny('21-21O1', '2121O1', 'KEYPAD')) || normText.includes('21-21O1');
-      }
-      else if (rawName.includes('OVERLAY, MEMBRANE SWITCH, CE ENGLISH')) {
-        isMatch = normText.includes('OVERLAY') && containsAny('ENGLISH', 'CE') && !normText.includes('21-21O1') && !normText.includes('KEYPAD');
-      }
-      else if (rawName.includes('KEYPAD, MEMBRANE SW')) {
-        isMatch = normText.includes('KEYPAD') && containsAny('MEMBRANE', 'CONN', 'SW') && !normText.includes('OVERLAY');
-      }
-
-      // 4. LABELS & LENSES
-      else if (rawName.includes('LBL, SET, DEVICE')) {
-        isMatch = normText.includes('SET') && containsAny('LBL', 'LABEL', 'DEVICE');
-      }
-      else if (rawName.includes('LENS, PAD PRINTED')) {
-        isMatch = normText.includes('LENS') || (normText.includes('PAD') && normText.includes('PRINTED'));
-      }
-      else if (rawName.includes('LABEL, PUMP, REAR')) {
-        isMatch = normText.includes('REAR') && containsAny('LABEL', 'LBL');
-      }
-
-      // 5. MODEL 2120 SPECIFIC LABELS
-      else if (rawName.includes('MODEL 2120')) {
-        if (normText.includes('2120')) {
-          if (rawName.includes('COSTA RICA')) {
-            isMatch = containsAny('COSTA', 'RICA');
-          } else if (rawName.includes('DRK GREY')) {
-            isMatch = containsAny('DRK', 'GREY', 'GRAY', 'DARK');
-          } else if (rawName.includes('BLUE')) {
-            isMatch = !containsAny('COSTA', 'RICA', 'DRK', 'GREY', 'GRAY', 'DARK');
-          }
-        }
-      }
-      else if (rawName.includes('VIP, BLUE')) {
-        isMatch = normText.includes('BLUE') && normText.includes('VIP') && !normText.includes('2120');
-      }
-      else if (rawName.includes('VIP, BLACK')) {
-        isMatch = normText.includes('BLACK') && normText.includes('VIP') && !normText.includes('2120');
-      }
-
-      // 6. GENERAL FALLBACK (for remaining single unique items)
-      else {
-        const stopWords = ['CADD', 'SOLIS', 'PUMP', 'DEVICE', 'MODEL', 'WITH', 'FROM', 'CONN', '1/EA', 'ONLY', 'AY', 'SW'];
-        const cleanTokens = rawName.replace(/[^A-Z0-9\s]/g, ' ').split(/\s+/).filter(w => w.length >= 3 && !stopWords.includes(w));
-        
-        if (cleanTokens.length > 0) {
-          let hits = 0;
-          cleanTokens.forEach(tok => { if (normText.includes(tok)) hits++; });
-          if (hits / cleanTokens.length >= 0.75) isMatch = true;
-        }
-      }
-
-      if (isMatch) {
+      if (hits / tokens.length >= 0.7) {
         if (!chk.checked) {
           chk.checked = true;
           chk.dispatchEvent(new Event('change', { bubbles: true }));
@@ -450,7 +309,7 @@
   };
 
   window._otCurrentOEMTool = {
-    id: 'solis',
-    autoSelect: window._otAutoSelectSolis
+    id: 'curlin',
+    autoSelect: window._otAutoSelectCurlin
   };
 })();
