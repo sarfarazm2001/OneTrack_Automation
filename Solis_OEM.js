@@ -358,4 +358,86 @@
 
       let isMatch = false;
 
-      const has = (...terms) => terms.every(t => normText
+      const has = (...terms) => terms.every(t => normText.includes(t.toUpperCase()));
+      const cHas = (...terms) => terms.every(t => compressedText.includes(t.toUpperCase().replace(/[^A-Z0-9]/g, '')));
+
+      // --- STRICT ANCHOR RULES ---
+      if (name.includes("HSG, BATTERY COMPARTMENT")) {
+        if ((has("BATTERY") || has("COMPARTMENT")) && (has("HSG") || has("HOUSING")) &&
+            !has("CONTACT") && !has("GASKET") && !has("DOOR") && !has("STABILIZER") && !has("FLOOR")) {
+          isMatch = true;
+        }
+      }
+      else if (name.includes("CONTACT, BATTERY COMPARTMENT FLOOR")) {
+        if (has("CONTACT") && has("FLOOR")) {
+          isMatch = true;
+        }
+      }
+      else if (name.includes("CONTACT, BATTERY, SPRING PIN")) {
+        if (has("CONTACT") && (has("SPRING") || has("PIN"))) {
+          isMatch = true;
+        }
+      }
+      else if (name.includes("DOOR AY, BATTERY, PUMP")) {
+        if (has("DOOR") && (has("BATTERY") || has("PUMP"))) {
+          isMatch = true;
+        }
+      }
+      else if (name.includes("SEAL, DSO, NEOPRENE")) {
+        if (has("NEOPRENE") || (has("SEAL") && (has("DSO") || has("DS0")))) {
+          isMatch = true;
+        }
+      }
+      else if (name.includes("21-2101-08")) {
+        if (cHas("212101")) {
+          isMatch = true;
+        }
+      }
+      else if (name.includes("CE ENGLISH")) {
+        if (has("OVERLAY") && (has("ENGLISH") || has("CE")) && !has("KEYPAD") && !cHas("212101")) {
+          isMatch = true;
+        }
+      }
+      else if (name.includes("STABILIZER, BATTERY, SST")) {
+        if (has("STABILIZER")) {
+          isMatch = true;
+        }
+      }
+      else if (name.includes("LENS, PAD PRINTED")) {
+        if (has("LENS") || (has("PAD") && has("PRINTED"))) {
+          isMatch = true;
+        }
+      }
+      else if (name.includes("VIP 1.2")) {
+        if (has("VIP") && (has("1.2") || cHas("VIP12") || cHas("VIP1 2"))) {
+          isMatch = true;
+        }
+      }
+      else if (name.includes("KEYPAD, MEMBRANE SW")) {
+        if (has("KEYPAD") && !has("OVERLAY") && !cHas("212101")) {
+          isMatch = true;
+        }
+      }
+      else if (name.includes("LBL, SET, DEVICE")) {
+        if (has("SET") && (has("LBL") || has("LABEL") || has("DEVICE")) && !has("VIP")) {
+          isMatch = true;
+        }
+      }
+
+      if (isMatch) {
+        if (!chk.checked) {
+          chk.checked = true;
+          chk.dispatchEvent(new Event('change', { bubbles: true }));
+        }
+        matchedCount++;
+      }
+    });
+
+    return matchedCount;
+  };
+
+  window._otCurrentOEMTool = {
+    id: 'solis',
+    autoSelect: window._otAutoSelectSolis
+  };
+})();
