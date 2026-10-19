@@ -301,7 +301,7 @@
     if (hasLabor && physicalParts.length === 0) {
       text = `The OEM certifies that the device passes the following: ${testBlock}`;
     } else if (physicalParts.length > 0) {
-      text = `Per the OEM, the following parts have been replaced: ${physicalParts.join(", ")} and passed the related testing. The OEM also certifies that the device passes the following: ${textBlock}`;
+      text = `Per the OEM, the following parts have been replaced: ${physicalParts.join(", ")} and passed the related testing. The OEM also certifies that the device passes the following: ${testBlock}`;
     } else {
       text = `The OEM certifies that the device passes the following: ${testBlock}`;
     }
@@ -325,24 +325,29 @@
     }
   };
 
-  // --- UNIFIED GLOBAL TOKEN MATCHING ENGINE ---
+  // --- DESCRIPTION-ONLY MATCHING ENGINE (IGNORES QTY COLUMN & ISOLATED NUMBERS) ---
   window._otAutoSelectSolis = function(ocrText) {
-    console.log("%c=== SOLIS GLOBAL UN-CHUNKED OCR MATCHING START ===", "color: #007bff; font-weight: bold;");
-
     if (!ocrText || typeof ocrText !== "string") return 0;
 
     const checkboxes = document.querySelectorAll('#solis-calc-modal .s_chk');
-    if (!checkboxes || checkboxes.length === 0) {
-      console.error("[Solis Error] Modal checkboxes not found in DOM.");
-      return 0;
-    }
+    if (!checkboxes || checkboxes.length === 0) return 0;
 
-    // Flatten entire OCR text into one continuous string ignoring lines/columns
-    const globalUpper = ocrText.toUpperCase().replace(/-\s*[\r\n]+\s*/g, '');
-    const cleanOcr = globalUpper.replace(/[\r\n]+/g, ' ').replace(/[\/\\.,_\-()]+/g, ' ').replace(/\s+/g, ' ').trim();
-    const compressedOcr = globalUpper.replace(/[^A-Z0-9]/g, '');
+    // 1. Unwrap hyphens across line breaks (e.g. CADD-\nSOLIS -> CADDSOLIS)
+    let cleaned = ocrText.toUpperCase().replace(/-\s*[\r\n]+\s*/g, '');
 
-    console.log("[FLATTENED GLOBAL OCR STREAM]:\n", cleanOcr);
+    // 2. Filter out QTY headers & standalone numbers from quantities
+    cleaned = cleaned
+      .replace(/\b(QTY|QUANTITY|PARTS?|REPLACED|DESCRIPTION|PART\s*NO|NO|RARE)\b/g, ' ')
+      .replace(/\b\d+\b/g, ' ');
+
+    // 3. Flatten into clean space-delimited text stream and compressed alphanumeric stream
+    const normText = cleaned
+      .replace(/[\r\n]+/g, ' ')
+      .replace(/[\/\\.,_\-()]+/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+
+    const compressedText = cleaned.replace(/[^A-Z0-9]/g, '');
 
     let matchedCount = 0;
 
@@ -352,103 +357,5 @@
       if (!name || name.includes("ONLY SELECT WHEN NOTHING") || name.includes("DO NOT USE")) return;
 
       let isMatch = false;
-      let reason = "";
 
-      const has = (...terms) => terms.every(t => cleanOcr.includes(t.toUpperCase()));
-      const hasAny = (...terms) => terms.some(t => cleanOcr.includes(t.toUpperCase()));
-      const cHas = (...terms) => terms.every(t => compressedOcr.includes(t.toUpperCase().replace(/[^A-Z0-9]/g, '')));
-
-      // 1. HSG, BATTERY COMPARTMENT
-      if (name.includes("HSG, BATTERY COMPARTMENT")) {
-        if ((has("BATTERY") || has("COMPARTMENT")) && (has("HSG") || has("HOUSING")) &&
-            !has("CONTACT") && !has("GASKET") && !has("STABILIZER")) {
-          isMatch = true; reason = "Matched HSG Battery Compartment";
-        }
-      }
-      // 2. CONTACT, BATTERY COMPARTMENT FLOOR
-      else if (name.includes("CONTACT, BATTERY COMPARTMENT FLOOR")) {
-        if (has("CONTACT") && has("FLOOR")) {
-          isMatch = true; reason = "Matched Contact Floor";
-        }
-      }
-      // 3. CONTACT, BATTERY, SPRING PIN
-      else if (name.includes("SPRING PIN")) {
-        if (has("CONTACT") && (has("SPRING") || has("PIN"))) {
-          isMatch = true; reason = "Matched Contact Spring Pin";
-        }
-      }
-      // 4. DOOR AY, BATTERY, PUMP
-      else if (name.includes("DOOR AY, BATTERY, PUMP")) {
-        if (has("DOOR") && (has("BATTERY") || has("PUMP"))) {
-          isMatch = true; reason = "Matched Door Ay Battery Pump";
-        }
-      }
-      // 5. SEAL, DSO, NEOPRENE
-      else if (name.includes("SEAL, DSO, NEOPRENE")) {
-        if (has("NEOPRENE") || (has("SEAL") && (has("DSO") || has("DS0")))) {
-          isMatch = true; reason = "Matched Seal DSO Neoprene";
-        }
-      }
-      // 6. OVERLAY 21-2101-08
-      else if (name.includes("21-2101-08")) {
-        if (cHas("212101") || (has("OVERLAY") && has("KEYPAD"))) {
-          isMatch = true; reason = "Matched Overlay 21-2101-08";
-        }
-      }
-      // 7. OVERLAY, CE ENGLISH
-      else if (name.includes("CE ENGLISH")) {
-        if (has("OVERLAY") && (has("ENGLISH") || has("CE")) && !has("KEYPAD") && !cHas("212101")) {
-          isMatch = true; reason = "Matched Overlay CE English";
-        }
-      }
-      // 8. STABILIZER, BATTERY, SST
-      else if (name.includes("STABILIZER, BATTERY, SST")) {
-        if (has("STABILIZER")) {
-          isMatch = true; reason = "Matched Stabilizer Battery";
-        }
-      }
-      // 9. LENS, PAD PRINTED
-      else if (name.includes("LENS, PAD PRINTED")) {
-        if (has("LENS") || (has("PAD") && has("PRINTED"))) {
-          isMatch = true; reason = "Matched Lens Pad Printed";
-        }
-      }
-      // 10. LBL, DEVICE, PUMP, CADD-SOLIS, VIP 1.2
-      else if (name.includes("VIP 1.2")) {
-        if (has("VIP") && (has("1.2") || cHas("VIP12") || cHas("VIP1 2"))) {
-          isMatch = true; reason = "Matched Label VIP 1.2";
-        }
-      }
-      // 11. KEYPAD, MEMBRANE SW, W/O CONN
-      else if (name.includes("KEYPAD, MEMBRANE SW")) {
-        if (has("KEYPAD") && !has("OVERLAY") && !cHas("212101")) {
-          isMatch = true; reason = "Matched Keypad Membrane SW";
-        }
-      }
-      // 12. LBL, SET, DEVICE
-      else if (name.includes("LBL, SET, DEVICE")) {
-        if (has("SET") && (has("LBL") || has("LABEL") || has("DEVICE"))) {
-          isMatch = true; reason = "Matched Lbl Set Device";
-        }
-      }
-
-      if (isMatch) {
-        console.log(`%c[MATCHED] -> "${name}" | ${reason}`, "color: #28a745; font-weight: bold;");
-        if (!chk.checked) {
-          chk.checked = true;
-          chk.dispatchEvent(new Event('change', { bubbles: true }));
-        }
-        matchedCount++;
-      }
-    });
-
-    console.log(`%c[Solis OCR Complete] Selected ${matchedCount} part(s).`, "color: #007bff; font-weight: bold;");
-    return matchedCount;
-  };
-
-  // Register engine globally
-  window._otCurrentOEMTool = {
-    id: 'solis',
-    autoSelect: window._otAutoSelectSolis
-  };
-})();
+      const has = (...terms) => terms.every(t => normText
