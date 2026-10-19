@@ -329,24 +329,25 @@
     }
   };
 
-  // --- ACCURATE BENCH OCR MATCHING ENGINE FOR SOLIS ---
+  // --- PRECISION BENCH MATCHING OCR ENGINE FOR SOLIS ---
   window._otAutoSelectSolis = function(ocrText) {
     console.log("%c=== SOLIS OCR DIAGNOSTIC START ===", "color: #007bff; font-weight: bold;");
 
     if (!ocrText || typeof ocrText !== "string") {
-      console.error("[Solis OCR Error] Received empty or non-string OCR input:", ocrText);
+      console.error("[Solis OCR Error] Empty or non-string OCR input text received.");
       return 0;
     }
 
+    // Clean OCR text: remove non-alphanumeric chars to make single spaced uppercase token stream
     const raw = ocrText.toUpperCase();
     const clean = raw.replace(/[^A-Z0-9]+/g, ' ');
 
-    console.log("[RAW OCR TEXT]:\n", raw);
-    console.log("[CLEAN OCR TEXT]:\n", clean);
+    console.log("[RAW OCR SCAN TEXT]:\n", raw);
+    console.log("[CLEANED TOKEN STREAM]:\n", clean);
 
     const checkboxes = box.querySelectorAll('.s_chk');
     if (!checkboxes || checkboxes.length === 0) {
-      console.error("[Solis OCR Error] No part checkboxes (.s_chk) found in modal DOM!");
+      console.error("[Solis OCR Error] No checkboxes found in modal DOM.");
       return 0;
     }
 
@@ -355,99 +356,107 @@
     checkboxes.forEach((chk) => {
       const name = (chk.value || '').toUpperCase().trim();
 
-      if (!name || name.includes("ONLY SELECT") || name.includes("DO NOT USE")) return;
+      if (!name || name.includes("ONLY SELECT WHEN NOTHING") || name.includes("DO NOT USE")) return;
 
       let match = false;
       let reason = "";
 
-      const has = (...terms) => terms.every(t => raw.includes(t.toUpperCase()));
-      const hasAny = (...terms) => terms.some(t => raw.includes(t.toUpperCase()));
+      const has = (...terms) => terms.every(t => clean.includes(t.toUpperCase().replace(/[^A-Z0-9]/g, '')));
+      const hasAny = (...terms) => terms.some(t => clean.includes(t.toUpperCase().replace(/[^A-Z0-9]/g, '')));
 
       // 1. HSG, BATTERY COMPARTMENT
-      if (name.includes("BATTERY COMPARTMENT") || name.includes("HSG, BATTERY")) {
-        if (has("BATTERY") && (has("COMPARTMENT") || has("HSG") || has("HOUSING"))) {
-          match = true; reason = "Battery Compartment Housing";
+      if (name === "HSG, BATTERY COMPARTMENT") {
+        if (hasAny("HSG", "HOUSING") && hasAny("BATTERY", "COMPARTMENT")) {
+          match = true; reason = "Matched HSG + Battery/Compartment";
         }
       }
 
       // 2. DOOR AY, BATTERY, PUMP
-      if (!match && (name.includes("DOOR") && name.includes("BATTERY"))) {
-        if (has("DOOR") && (has("BATTERY") || has("PUMP"))) {
-          match = true; reason = "Door Ay Battery Pump";
+      else if (name === "DOOR AY, BATTERY, PUMP") {
+        if (has("DOOR") && hasAny("BATTERY", "PUMP")) {
+          match = true; reason = "Matched Door + Battery/Pump";
         }
       }
 
       // 3. SEAL, DSO, NEOPRENE
-      if (!match && (name.includes("NEOPRENE") || name.includes("SEAL, DSO"))) {
-        if (has("NEOPRENE") || (has("SEAL") && (has("DSO") || has("DS0")))) {
-          match = true; reason = "Seal DSO Neoprene";
+      else if (name === "SEAL, DSO, NEOPRENE") {
+        if (has("NEOPRENE") || (has("SEAL") && hasAny("DSO", "DS0"))) {
+          match = true; reason = "Matched Seal + DSO/Neoprene";
         }
       }
 
-      // 4. OVERLAY, MEMBRANE SWITCH 21-2101-08
-      if (!match && (name.includes("21-2101") || (name.includes("OVERLAY") && name.includes("KEYPAD")))) {
-        if (has("21-2101") || has("212101") || (has("OVERLAY") && has("KEYPAD"))) {
-          match = true; reason = "Overlay Keypad 21-2101";
+      // 4. OVERLAY, MEMBRANE SWITCH (KEYPAD), CADD-SOLIS, 21-2101-08
+      else if (name.includes("21-2101-08")) {
+        if (hasAny("212101", "21 2101") || (has("OVERLAY") && has("KEYPAD"))) {
+          match = true; reason = "Matched Overlay Keypad 21-2101";
         }
       }
 
-      // 5. OVERLAY, CE ENGLISH
-      if (!match && name.includes("CE ENGLISH")) {
-        if (has("OVERLAY") && (has("ENGLISH") || has("CE")) && !has("KEYPAD")) {
-          match = true; reason = "Overlay CE English";
+      // 5. OVERLAY, MEMBRANE SWITCH, CE ENGLISH
+      else if (name === "OVERLAY, MEMBRANE SWITCH, CE ENGLISH") {
+        if (has("OVERLAY") && hasAny("ENGLISH", "CE") && !has("KEYPAD") && !hasAny("212101", "21 2101")) {
+          match = true; reason = "Matched Overlay CE English";
         }
       }
 
-      // 6. KEYPAD, MEMBRANE SW, W/O CONN
-      if (!match && (name.includes("W/O CONN") || (name.includes("KEYPAD") && name.includes("MEMBRANE")))) {
-        if (has("KEYPAD") && (has("MEMBRANE") || has("CONN") || has("SW"))) {
-          match = true; reason = "Keypad Membrane SW";
+      // 6. LBL, DEVICE, PUMP, CADD-SOLIS, MODEL 2120... BLUE, RX ONLY
+      else if (name.includes("MODEL 2120") && name.includes("BLUE, RX ONLY") && !name.includes("COSTA RICA")) {
+        if (has("2120") && has("BLUE") && !hasAny("COSTA", "GREY", "GRAY", "DRK")) {
+          match = true; reason = "Matched Model 2120 Blue Label";
         }
       }
 
-      // 7. LBL, SET, DEVICE
-      if (!match && (name.includes("LBL, SET") || name.includes("SET, DEVICE"))) {
-        if (hasAny("LBL", "LABEL") && has("SET")) {
-          match = true; reason = "Lbl Set Device";
+      // COSTA RICA VARIANT
+      else if (name.includes("MODEL 2120") && name.includes("COSTA RICA")) {
+        if (has("2120") && hasAny("COSTA", "RICA")) {
+          match = true; reason = "Matched Model 2120 Costa Rica Label";
         }
       }
 
-      // 8. LENS, PAD PRINTED
-      if (!match && name.includes("PAD PRINTED")) {
-        if (has("LENS") && (has("PAD") || has("PRINTED"))) {
-          match = true; reason = "Lens Pad Printed";
+      // DARK GREY VARIANT
+      else if (name.includes("MODEL 2120") && name.includes("DRK GREY")) {
+        if (has("2120") && hasAny("DRK", "GREY", "GRAY", "DARK")) {
+          match = true; reason = "Matched Model 2120 Dark Grey Label";
         }
       }
 
-      // 9. MODEL 2120 LABELS
-      if (!match && name.includes("MODEL 2120")) {
-        if (has("2120") || has("MODEL")) {
-          if (name.includes("COSTA RICA") && hasAny("COSTA", "RICA")) {
-            match = true; reason = "Model 2120 Costa Rica Label";
-          } else if (name.includes("DRK GREY") && hasAny("DRK", "GREY", "GRAY", "DARK")) {
-            match = true; reason = "Model 2120 Dark Grey Label";
-          } else if (name.includes("BLUE, RX ONLY") && !name.includes("COSTA RICA") && has("BLUE") && !hasAny("COSTA", "GREY", "GRAY", "DARK")) {
-            match = true; reason = "Model 2120 Blue Label";
-          }
+      // 7. KEYPAD, MEMBRANE SW, W/O CONN, CADD-SOLIS
+      else if (name === "KEYPAD, MEMBRANE SW, W/O CONN, CADD-SOLIS") {
+        if (has("KEYPAD") && hasAny("CONN", "WO", "W O", "MEMBRANE", "SW") && !has("OVERLAY") && !hasAny("212101", "21 2101")) {
+          match = true; reason = "Matched Keypad Membrane SW";
         }
       }
 
-      // 10. GENERAL FALLBACK KEYWORD MATCHING
-      if (!match) {
-        const ignore = ["CADD", "SOLIS", "PUMP", "DEVICE", "MODEL", "VIP", "RX", "ONLY", "3RD", "EDITION", "W", "CUL", "1/EA", "AY", "SW"];
-        const cleanWords = name.replace(/[^A-Z0-9\s]/g, ' ').split(/\s+/).filter(w => w.length >= 3 && !ignore.includes(w));
-
-        if (cleanWords.length > 0) {
-          const hits = cleanWords.filter(w => clean.includes(w));
-          if (hits.length >= 2 || (cleanWords.length === 1 && hits.length === 1 && cleanWords[0].length >= 5)) {
-            match = true;
-            reason = `Keyword Match: [${hits.join(', ')}]`;
-          }
+      // 8. LBL, SET, DEVICE, CADD-SOLIS
+      else if (name.includes("LBL, SET, DEVICE")) {
+        if (has("SET") && hasAny("LBL", "LABEL", "DEVICE")) {
+          match = true; reason = "Matched Lbl Set Device";
         }
+      }
+
+      // 9. LENS, PAD PRINTED, CADD SOLIS
+      else if (name.includes("LENS, PAD PRINTED")) {
+        if (has("LENS") || (has("PAD") && has("PRINTED"))) {
+          match = true; reason = "Matched Lens Pad Printed";
+        }
+      }
+
+      // STRICT ANCHORED GUARDS PREVENT FALSE POSITIVES FOR OTHER CATALOG ITEMS
+      else if (name.includes("CONTACT, BATTERY COMPARTMENT FLOOR")) {
+        if (has("CONTACT") && has("FLOOR")) { match = true; reason = "Matched Contact Floor"; }
+      }
+      else if (name.includes("CONTACT, BATTERY, SPRING PIN")) {
+        if (has("CONTACT") && hasAny("SPRING", "PIN")) { match = true; reason = "Matched Contact Spring Pin"; }
+      }
+      else if (name.includes("GASKET, CONDUCTIVE, BAT COMP")) {
+        if (has("GASKET") && has("CONDUCTIVE") && hasAny("BAT", "COMP")) { match = true; reason = "Matched Gasket Conductive"; }
+      }
+      else if (name.includes("GASKET, ENVIRONMENTAL, BATTERY COMPARTMENT")) {
+        if (has("GASKET") && has("ENVIRONMENTAL")) { match = true; reason = "Matched Gasket Environmental"; }
       }
 
       if (match) {
-        console.log(`%c[MATCH HIT] -> "${name}" | Reason: ${reason}`, "color: #28a745; font-weight: bold;");
+        console.log(`%c[MATCHED] -> "${name}" | ${reason}`, "color: #28a745; font-weight: bold;");
         if (!chk.checked) {
           chk.checked = true;
           chk.dispatchEvent(new Event('change', { bubbles: true }));
@@ -457,9 +466,9 @@
     });
 
     if (matchedCount === 0) {
-      console.error("[Solis OCR Warning] 0 parts matched. Inspect the RAW and CLEAN console text logs above to see what was extracted.");
+      console.error("[Solis OCR Warning] 0 parts matched. Inspect clean token stream above.");
     } else {
-      console.log(`%c[Solis OCR Complete] Successfully selected ${matchedCount} part(s).`, "color: #007bff; font-weight: bold;");
+      console.log(`%c[Solis OCR Complete] Selected ${matchedCount} part(s).`, "color: #007bff; font-weight: bold;");
     }
 
     return matchedCount;
