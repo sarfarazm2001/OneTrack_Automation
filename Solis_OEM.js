@@ -112,37 +112,32 @@
 
   let overlay = document.createElement("div");
   overlay.id = "solis-calc-modal";
-  overlay.style.cssText = "position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.6);z-index:99999;display:flex;align-items:center;justify-content:center;font-family:sans-serif;";
+  overlay.style.cssText = "position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:99999;display:flex;align-items:center;justify-content:center;font-family:sans-serif;";
 
   let box = document.createElement("div");
-  box.style.cssText = "background:#1e2329;padding:20px;border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,0.5);width:540px;text-align:left;color:#e6edf3;border:1px solid #30363d;";
+  box.style.cssText = "background:#fff;padding:20px;border-radius:8px;box-shadow:0 4px 10px rgba(0,0,0,0.3);width:580px;text-align:left;color:#333;";
 
   let html = `
-    <h3 style="margin-top:0;margin-bottom:12px;font-size:15px;text-align:center;color:#fff;">Select Solis OEM Replaced Parts & Scanner</h3>
+    <h3 style="margin-top:0;margin-bottom:12px;font-size:16px;text-align:center;color:#222;">Solis Findings Generator</h3>
     
-    <!-- Scanner Toggle Button -->
-    <button id="s_scan_toggle_btn" style="width:100%;padding:8px;margin-bottom:10px;background:#007bff;color:#fff;border:none;border-radius:5px;cursor:pointer;font-weight:bold;font-size:12px;">
-      📷 Open Document Scanner Viewfinder
-    </button>
-
-    <!-- Webcam Container -->
-    <div id="s_webcam_container" style="display:none;background:#0d1117;padding:10px;border-radius:6px;border:1px solid #30363d;margin-bottom:10px;text-align:center;">
-      <video id="s_video_element" autoplay playsinline style="width:100%;max-height:220px;border-radius:4px;background:#000;"></video>
-      <button id="s_capture_btn" style="width:100%;margin-top:8px;padding:8px;background:#28a745;color:#fff;border:none;border-radius:5px;cursor:pointer;font-weight:bold;font-size:12px;">
-        📸 Snap Document Photo
-      </button>
+    <div style="display:flex;gap:8px;margin-bottom:12px;background:#f8f9fa;padding:8px;border-radius:6px;border:1px solid #e9ecef;">
+      <button id="s_export_btn" style="flex:1;padding:6px 10px;background:#17a2b8;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:11px;font-weight:bold;">📤 Export Source (.js)</button>
+      <button id="s_import_btn" style="flex:1;padding:6px 10px;background:#6f42c1;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:11px;font-weight:bold;">📥 Import Parts File</button>
+      <input type="file" id="s_file_input" accept=".js,.json" style="display:none;">
     </div>
 
-    <!-- Status Toast -->
-    <div id="s_toast" style="display:none;padding:6px 10px;background:#17a2b8;color:#fff;border-radius:4px;font-size:11px;font-weight:bold;margin-bottom:10px;text-align:center;"></div>
+    <div style="display:flex;gap:6px;margin-bottom:10px;">
+      <input type="text" id="s_custom_desc" placeholder="Part Description" style="flex:2;padding:6px 8px;border:1px solid #ccc;border-radius:4px;font-size:12px;">
+      <input type="text" id="s_custom_pn" placeholder="Part #" style="flex:1;padding:6px 8px;border:1px solid #ccc;border-radius:4px;font-size:12px;">
+      <button id="s_add_btn" style="padding:6px 12px;background:#007bff;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:12px;font-weight:bold;">+ Add</button>
+    </div>
 
-    <!-- Parts List Container -->
-    <div id="s_parts_list" style="max-height:260px;overflow-y:auto;margin-bottom:12px;background:#161b22;padding:6px;border-radius:6px;border:1px solid #30363d;"></div>
+    <div id="s_parts_list" style="max-height:240px;overflow-y:auto;margin-bottom:12px;"></div>
 
-    <!-- Action Buttons -->
     <div style="display:flex;gap:8px;">
-      <button id="s_copy" style="flex:1.5;padding:10px;background:#28a745;color:#fff;border:none;border-radius:5px;cursor:pointer;font-size:12px;font-weight:bold;">Confirm Selection</button>
-      <button id="s_cancel" style="flex:1;padding:10px;background:#dc3545;color:#fff;border:none;border-radius:5px;cursor:pointer;font-size:12px;font-weight:bold;">Cancel</button>
+      <button id="s_back" style="flex:1;padding:10px;background:#6c757d;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:13px;font-weight:bold;">← Back</button>
+      <button id="s_copy" style="flex:1.2;padding:10px;background:#28a745;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:13px;font-weight:bold;">Apply</button>
+      <button id="s_cancel" style="flex:1;padding:10px;background:#dc3545;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:13px;font-weight:bold;">Cancel</button>
     </div>
   `;
 
@@ -150,141 +145,35 @@
   overlay.appendChild(box);
   document.body.appendChild(overlay);
 
-  let mediaStream = null;
-  const scanToggleBtn = box.querySelector("#s_scan_toggle_btn");
-  const webcamContainer = box.querySelector("#s_webcam_container");
-  const videoElement = box.querySelector("#s_video_element");
-  const captureBtn = box.querySelector("#s_capture_btn");
-  const toast = box.querySelector("#s_toast");
-
-  function showToast(msg) {
-    toast.innerText = msg;
-    toast.style.display = "block";
-  }
-
-  scanToggleBtn.onclick = async () => {
-    if (webcamContainer.style.display === "none") {
-      try {
-        mediaStream = await navigator.mediaDevices.getUserMedia({
-          video: { width: { ideal: 1920 }, height: { ideal: 1080 }, facingMode: { ideal: "environment" } }
-        });
-        videoElement.srcObject = mediaStream;
-        webcamContainer.style.display = "block";
-        scanToggleBtn.innerText = "❌ Close Scanner Viewfinder";
-      } catch (err) {
-        alert("Camera Error: " + err.message);
-      }
-    } else {
-      if (mediaStream) mediaStream.getTracks().forEach(t => t.stop());
-      webcamContainer.style.display = "none";
-      scanToggleBtn.innerText = "📷 Open Document Scanner Viewfinder";
-    }
+  const getCurrentPartsFromDOM = () => {
+    const rows = Array.from(document.querySelectorAll("#s_parts_list .part_row"));
+    return rows.map(r => ({
+      name: r.querySelector(".desc_txt").innerText.trim(),
+      pn: r.querySelector(".pn_txt").innerText.trim()
+    }));
   };
 
-  // --- BUILT-IN TESSERACT OCR SCANNER ---
-  captureBtn.onclick = async () => {
-    let canvas = document.createElement("canvas");
-    canvas.width = videoElement.videoWidth || 1280;
-    canvas.height = videoElement.videoHeight || 720;
-    let ctx = canvas.getContext("2d");
-    ctx.drawImage(videoElement, 0, 0, canvas.width, canvas.height);
-
-    let imageDataUrl = canvas.toDataURL("image/jpeg", 0.85);
-
-    if (mediaStream) mediaStream.getTracks().forEach(t => t.stop());
-    webcamContainer.style.display = "none";
-    scanToggleBtn.innerText = "📷 Open Document Scanner Viewfinder";
-
-    showToast("⏳ Loading OCR engine & analyzing document...");
-
-    try {
-      if (typeof Tesseract === "undefined") {
-        await new Promise((resolve, reject) => {
-          let script = document.createElement("script");
-          script.src = "https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js";
-          script.onload = resolve;
-          script.onerror = reject;
-          document.head.appendChild(script);
-        });
+  const attachRowEvents = (row) => {
+    row.querySelector(".s_edit_btn").onclick = () => {
+      let newDesc = prompt("Edit Part Description:", row.querySelector(".desc_txt").innerText);
+      if (newDesc !== null && newDesc.trim() !== "") {
+        let newPn = prompt("Edit Part Number:", row.querySelector(".pn_txt").innerText);
+        if (newPn !== null && newPn.trim() !== "") {
+          row.querySelector(".desc_txt").innerText = newDesc.trim();
+          let chk = row.querySelector(".s_chk");
+          chk.value = newDesc.trim();
+          chk.dataset.pn = newPn.trim();
+          row.querySelector(".pn_txt").innerText = newPn.trim();
+          saveStoredParts(getCurrentPartsFromDOM());
+        } else {
+          alert("Part Number cannot be blank.");
+        }
       }
-
-      let result = await Tesseract.recognize(imageDataUrl, "eng");
-      let rawText = result.data.text ? result.data.text.trim().toUpperCase() : "";
-
-      if (rawText) {
-        console.log("--- RAW TESSERACT OCR SCAN --- \n", rawText);
-        let matchedCount = 0;
-        let cleanScanText = rawText.replace(/[\s,\-\/]+/g, " ");
-
-        const checkboxes = box.querySelectorAll(".s_chk");
-        checkboxes.forEach((chk) => {
-          let partName = chk.value;
-          if (!partName || partName.includes("ONLY SELECT") || partName.includes("DO NOT USE")) return;
-
-          let partNameUpper = partName.toUpperCase();
-          let isMatched = false;
-          let cleanPartName = partNameUpper.replace(/[\s,\-\/]+/g, " ");
-
-          if (cleanScanText.includes(cleanPartName)) {
-            isMatched = true;
-          }
-
-          // 1. HSG, Battery Compartment
-          if ((rawText.includes("BATTERY") && rawText.includes("COMPARTMENT")) && partNameUpper === "HSG, BATTERY COMPARTMENT") {
-            isMatched = true;
-          }
-          // 2. Door Assembly, Battery, Pump
-          if ((rawText.includes("DOOR") && (rawText.includes("BATTERY") || rawText.includes("PUMP"))) || rawText.includes("30-3245")) {
-            if (partNameUpper === "DOOR AY, BATTERY, PUMP") isMatched = true;
-          }
-          // 3. Seal, DSO, Neoprene
-          if ((rawText.includes("NEOPRENE") || (rawText.includes("SEAL") && rawText.includes("DSO"))) || rawText.includes("30-3381") || rawText.includes("30-4085")) {
-            if (partNameUpper === "SEAL, DSO, NEOPRENE") isMatched = true;
-          }
-          // 4. Overlay Membrane Switch 21-2101-08
-          if ((rawText.includes("21-2101") || (rawText.includes("OVERLAY") && rawText.includes("KEYPAD"))) || rawText.includes("21-2101-08")) {
-            if (partNameUpper.includes("21-2101-08")) isMatched = true;
-          }
-          // 5. Overlay Membrane Switch CE English
-          if (rawText.includes("CE ENGLISH") || (rawText.includes("OVERLAY") && rawText.includes("ENGLISH"))) {
-            if (partNameUpper.includes("CE ENGLISH")) isMatched = true;
-          }
-          // 6. Blue Model Label
-          if (rawText.includes("MODEL 2120") && rawText.includes("BLUE") && partNameUpper.includes("BLUE, RX ONLY")) {
-            isMatched = true;
-          }
-          // 7. Dark Grey Model Label
-          if (rawText.includes("MODEL 2120") && rawText.includes("DRK GREY") && partNameUpper.includes("DRK GREY, RX ONLY")) {
-            isMatched = true;
-          }
-          // 8. Keypad Membrane Switch w/o Conn
-          if ((rawText.includes("KEYPAD") && (rawText.includes("MEMBRANE") || rawText.includes("W/O CONN") || rawText.includes("CONN"))) || rawText.includes("70-0229")) {
-            if (partNameUpper === "KEYPAD, MEMBRANE SW, W/O CONN, CADD-SOLIS") isMatched = true;
-          }
-          // 9. Set Label
-          if ((rawText.includes("LBL") && rawText.includes("SET")) || rawText.includes("40-6288-24A")) {
-            if (partNameUpper.includes("LBL, SET, DEVICE")) isMatched = true;
-          }
-          // 10. Lens Pad Printed
-          if ((rawText.includes("LENS") && rawText.includes("PAD PRINTED")) || rawText.includes("40-5733-51A") || rawText.includes("40-5733")) {
-            if (partNameUpper === "LENS, PAD PRINTED, CADD SOLIS") isMatched = true;
-          }
-
-          if (isMatched && !chk.checked) {
-            chk.checked = true;
-            chk.dispatchEvent(new Event("change", { bubbles: true }));
-            matchedCount++;
-          }
-        });
-
-        showToast(`✓ OCR scanned! Auto-selected ${matchedCount} specific part(s).`);
-      } else {
-        alert("Could not detect any text from captured image.");
-      }
-    } catch (err) {
-      console.error("Tesseract Error:", err);
-      alert("Error processing local OCR: " + err.message);
-    }
+    };
+    row.querySelector(".s_del_btn").onclick = () => { 
+      row.remove(); 
+      saveStoredParts(getCurrentPartsFromDOM());
+    };
   };
 
   const renderPartsList = (partsData) => {
@@ -297,28 +186,110 @@
     partsData.forEach((p) => {
       let row = document.createElement("div");
       row.className = "part_row";
-      row.style.cssText = "display:flex;align-items:center;justify-content:space-between;padding:5px 0;font-size:12px;border-bottom:1px solid #21262d;";
+      row.style.cssText = "display:flex;align-items:center;justify-content:space-between;padding:4px 0;font-size:12px;border-bottom:1px solid #f0f0f0;";
       row.innerHTML = `
-        <label style="display:flex;align-items:center;cursor:pointer;flex:1;margin-right:10px;color:#c9d1d9;">
+        <label style="display:flex;align-items:center;cursor:pointer;flex:1;margin-right:10px;">
           <input type="checkbox" class="s_chk" data-pn="${p.pn}" value="${p.name}" style="margin-right:8px;transform:scale(1.1);flex-shrink:0;">
           <span class="desc_txt">${p.name}</span>
         </label>
-        <span class="pn_txt" style="color:#8b949e;font-family:monospace;white-space:nowrap;">${p.pn}</span>
+        <div style="display:flex;align-items:center;gap:6px;">
+          <span class="pn_txt" style="color:#666;font-family:monospace;white-space:nowrap;margin-right:4px;">${p.pn}</span>
+          <button class="s_edit_btn" style="padding:2px 6px;font-size:10px;background:#ffc107;color:#000;border:none;border-radius:3px;cursor:pointer;">Edit</button>
+          <button class="s_del_btn" style="padding:2px 6px;font-size:10px;background:#dc3545;color:#fff;border:none;border-radius:3px;cursor:pointer;">Delete</button>
+        </div>
       `;
       listContainer.appendChild(row);
+      attachRowEvents(row);
     });
   };
 
   renderPartsList(getStoredParts());
 
-  document.getElementById("s_cancel").onclick = () => {
-    if (mediaStream) mediaStream.getTracks().forEach(t => t.stop());
+  document.getElementById("s_export_btn").onclick = () => {
+    const currentParts = getCurrentPartsFromDOM();
+    const selfCode = runSolisCalc.toString();
+    const partsJson = JSON.stringify(currentParts, null, 4);
+    
+    const modifiedCode = `(${selfCode})()`.replace(
+      /const initialParts = \[[\s\S]*?\];/,
+      `const initialParts = ${partsJson};`
+    );
+
+    const blob = new Blob([modifiedCode], { type: "application/javascript" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "solis_findings_generator.js";
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
+  document.getElementById("s_import_btn").onclick = () => {
+    document.getElementById("s_file_input").click();
+  };
+
+  document.getElementById("s_file_input").onchange = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      try {
+        const fileContent = event.target.result;
+        let importedParts = [];
+
+        if (file.name.endsWith(".json")) {
+          importedParts = JSON.parse(fileContent);
+        } else if (file.name.endsWith(".js")) {
+          const match = fileContent.match(/const initialParts = (\[[\s\S]*?\]);/) || fileContent.match(/let parts = (\[[\s\S]*?\]);/);
+          if (match && match[1]) {
+            importedParts = JSON.parse(match[1]);
+          } else {
+            throw new Error("Could not parse parts array from the JS file.");
+          }
+        }
+
+        if (Array.isArray(importedParts) && importedParts.length > 0) {
+          saveStoredParts(importedParts);
+          renderPartsList(importedParts);
+          alert(`Successfully imported ${importedParts.length} parts!`);
+        } else {
+          alert("Import failed: No valid parts list found.");
+        }
+      } catch (err) {
+        alert("Error reading file: " + err.message);
+      }
+    };
+    reader.readAsText(file);
+  };
+
+  document.getElementById("s_add_btn").onclick = () => {
+    let desc = document.getElementById("s_custom_desc").value.trim();
+    let pn = document.getElementById("s_custom_pn").value.trim();
+    if (!desc || !pn) { alert("Both Part Description and Part # are required."); return; }
+    
+    let current = getStoredParts();
+    current.unshift({ name: desc, pn: pn });
+    saveStoredParts(current);
+    renderPartsList(current);
+
+    document.getElementById("s_custom_desc").value = "";
+    document.getElementById("s_custom_pn").value = "";
+  };
+
+  document.getElementById("s_cancel").onclick = () => document.body.removeChild(overlay);
+  
+  document.getElementById("s_back").onclick = () => {
     document.body.removeChild(overlay);
+    if (typeof window.openOneTrackToolkit === "function") {
+      window.openOneTrackToolkit();
+    }
   };
 
   document.getElementById("s_copy").onclick = () => {
-    if (mediaStream) mediaStream.getTracks().forEach(t => t.stop());
-    let checkedBoxes = Array.from(box.querySelectorAll(".s_chk:checked"));
+    let checkedBoxes = Array.from(document.querySelectorAll("#solis-calc-modal .s_chk:checked"));
     checkedBoxes.forEach(cb => recordUsage(cb.value));
 
     let physicalParts = checkedBoxes.filter(cb => cb.dataset.pn !== "LABOR").map(cb => cb.value);
@@ -330,7 +301,7 @@
     if (hasLabor && physicalParts.length === 0) {
       text = `The OEM certifies that the device passes the following: ${testBlock}`;
     } else if (physicalParts.length > 0) {
-      text = `Per the OEM, the following parts have been replaced: ${physicalParts.join(", ")} and passed the related testing. The OEM also certifies that the device passes the following: ${testBlock}`;
+      text = `Per the OEM, the following parts have been replaced: ${physicalParts.join(", ")} and passed the related testing. The OEM also certifies that the device passes the following: ${textBlock}`;
     } else {
       text = `The OEM certifies that the device passes the following: ${testBlock}`;
     }
@@ -354,6 +325,128 @@
     }
   };
 
+  // --- UNIFIED GLOBAL TOKEN MATCHING ENGINE ---
+  window._otAutoSelectSolis = function(ocrText) {
+    console.log("%c=== SOLIS GLOBAL UN-CHUNKED OCR MATCHING START ===", "color: #007bff; font-weight: bold;");
+
+    if (!ocrText || typeof ocrText !== "string") return 0;
+
+    const checkboxes = document.querySelectorAll('#solis-calc-modal .s_chk');
+    if (!checkboxes || checkboxes.length === 0) {
+      console.error("[Solis Error] Modal checkboxes not found in DOM.");
+      return 0;
+    }
+
+    // Flatten entire OCR text into one continuous string ignoring lines/columns
+    const globalUpper = ocrText.toUpperCase().replace(/-\s*[\r\n]+\s*/g, '');
+    const cleanOcr = globalUpper.replace(/[\r\n]+/g, ' ').replace(/[\/\\.,_\-()]+/g, ' ').replace(/\s+/g, ' ').trim();
+    const compressedOcr = globalUpper.replace(/[^A-Z0-9]/g, '');
+
+    console.log("[FLATTENED GLOBAL OCR STREAM]:\n", cleanOcr);
+
+    let matchedCount = 0;
+
+    checkboxes.forEach((chk) => {
+      const name = (chk.value || '').trim().toUpperCase();
+
+      if (!name || name.includes("ONLY SELECT WHEN NOTHING") || name.includes("DO NOT USE")) return;
+
+      let isMatch = false;
+      let reason = "";
+
+      const has = (...terms) => terms.every(t => cleanOcr.includes(t.toUpperCase()));
+      const hasAny = (...terms) => terms.some(t => cleanOcr.includes(t.toUpperCase()));
+      const cHas = (...terms) => terms.every(t => compressedOcr.includes(t.toUpperCase().replace(/[^A-Z0-9]/g, '')));
+
+      // 1. HSG, BATTERY COMPARTMENT
+      if (name.includes("HSG, BATTERY COMPARTMENT")) {
+        if ((has("BATTERY") || has("COMPARTMENT")) && (has("HSG") || has("HOUSING")) &&
+            !has("CONTACT") && !has("GASKET") && !has("STABILIZER")) {
+          isMatch = true; reason = "Matched HSG Battery Compartment";
+        }
+      }
+      // 2. CONTACT, BATTERY COMPARTMENT FLOOR
+      else if (name.includes("CONTACT, BATTERY COMPARTMENT FLOOR")) {
+        if (has("CONTACT") && has("FLOOR")) {
+          isMatch = true; reason = "Matched Contact Floor";
+        }
+      }
+      // 3. CONTACT, BATTERY, SPRING PIN
+      else if (name.includes("SPRING PIN")) {
+        if (has("CONTACT") && (has("SPRING") || has("PIN"))) {
+          isMatch = true; reason = "Matched Contact Spring Pin";
+        }
+      }
+      // 4. DOOR AY, BATTERY, PUMP
+      else if (name.includes("DOOR AY, BATTERY, PUMP")) {
+        if (has("DOOR") && (has("BATTERY") || has("PUMP"))) {
+          isMatch = true; reason = "Matched Door Ay Battery Pump";
+        }
+      }
+      // 5. SEAL, DSO, NEOPRENE
+      else if (name.includes("SEAL, DSO, NEOPRENE")) {
+        if (has("NEOPRENE") || (has("SEAL") && (has("DSO") || has("DS0")))) {
+          isMatch = true; reason = "Matched Seal DSO Neoprene";
+        }
+      }
+      // 6. OVERLAY 21-2101-08
+      else if (name.includes("21-2101-08")) {
+        if (cHas("212101") || (has("OVERLAY") && has("KEYPAD"))) {
+          isMatch = true; reason = "Matched Overlay 21-2101-08";
+        }
+      }
+      // 7. OVERLAY, CE ENGLISH
+      else if (name.includes("CE ENGLISH")) {
+        if (has("OVERLAY") && (has("ENGLISH") || has("CE")) && !has("KEYPAD") && !cHas("212101")) {
+          isMatch = true; reason = "Matched Overlay CE English";
+        }
+      }
+      // 8. STABILIZER, BATTERY, SST
+      else if (name.includes("STABILIZER, BATTERY, SST")) {
+        if (has("STABILIZER")) {
+          isMatch = true; reason = "Matched Stabilizer Battery";
+        }
+      }
+      // 9. LENS, PAD PRINTED
+      else if (name.includes("LENS, PAD PRINTED")) {
+        if (has("LENS") || (has("PAD") && has("PRINTED"))) {
+          isMatch = true; reason = "Matched Lens Pad Printed";
+        }
+      }
+      // 10. LBL, DEVICE, PUMP, CADD-SOLIS, VIP 1.2
+      else if (name.includes("VIP 1.2")) {
+        if (has("VIP") && (has("1.2") || cHas("VIP12") || cHas("VIP1 2"))) {
+          isMatch = true; reason = "Matched Label VIP 1.2";
+        }
+      }
+      // 11. KEYPAD, MEMBRANE SW, W/O CONN
+      else if (name.includes("KEYPAD, MEMBRANE SW")) {
+        if (has("KEYPAD") && !has("OVERLAY") && !cHas("212101")) {
+          isMatch = true; reason = "Matched Keypad Membrane SW";
+        }
+      }
+      // 12. LBL, SET, DEVICE
+      else if (name.includes("LBL, SET, DEVICE")) {
+        if (has("SET") && (has("LBL") || has("LABEL") || has("DEVICE"))) {
+          isMatch = true; reason = "Matched Lbl Set Device";
+        }
+      }
+
+      if (isMatch) {
+        console.log(`%c[MATCHED] -> "${name}" | ${reason}`, "color: #28a745; font-weight: bold;");
+        if (!chk.checked) {
+          chk.checked = true;
+          chk.dispatchEvent(new Event('change', { bubbles: true }));
+        }
+        matchedCount++;
+      }
+    });
+
+    console.log(`%c[Solis OCR Complete] Selected ${matchedCount} part(s).`, "color: #007bff; font-weight: bold;");
+    return matchedCount;
+  };
+
+  // Register engine globally
   window._otCurrentOEMTool = {
     id: 'solis',
     autoSelect: window._otAutoSelectSolis
