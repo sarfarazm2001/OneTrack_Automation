@@ -422,6 +422,10 @@
         matchedCount++;
       }
     });
+      } catch (err) {
+          console.error("Tesseract OCR Error:", err);
+          alert("Error loading or processing local OCR recognition.");
+      }
 
     return matchedCount;
   };
