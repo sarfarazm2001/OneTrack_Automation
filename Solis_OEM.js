@@ -325,85 +325,111 @@
     }
   };
 
-  // --- FUZZY TRIPLE-PASS OCR SELECTION ENGINE ---
+  // --- MULTI-LINE DESCRIPTION SELECTION ENGINE FOR SOLIS ---
   window._otAutoSelectSolis = function(ocrText) {
     if (!ocrText || typeof ocrText !== "string") return 0;
 
     const checkboxes = document.querySelectorAll('#solis-calc-modal .s_chk');
     if (!checkboxes || checkboxes.length === 0) return 0;
 
-    // Helper: Normalize OCR String (replaces common OCR typos)
-    const normalize = (str) => {
-      return str.toUpperCase()
-        .replace(/[\/\\.,_\-()]+/g, ' ')
-        .replace(/\b5\b/g, 'S')
-        .replace(/\b0\b/g, 'O')
-        .replace(/\s+/g, ' ')
-        .trim();
-    };
+    // Join line-break wrapped hyphens (e.g. CADD-\nSOLIS -> CADDSOLIS)
+    const unwrapHyphens = ocrText.toUpperCase().replace(/-\s*[\r\n]+\s*/g, '');
 
-    const rawUpper = ocrText.toUpperCase();
-    const cleanOcr = normalize(ocrText);
-    const compressedOcr = rawUpper.replace(/[^A-Z0-9]/g, '');
+    // Normalize OCR text into a single continuous space-delimited string
+    const normText = unwrapHyphens
+      .replace(/[\r\n]+/g, ' ')
+      .replace(/[\/\\.,_\-()]+/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+
+    // Secondary compressed string ignoring spaces and hyphens completely
+    const compressedText = unwrapHyphens.replace(/[^A-Z0-9]/g, '');
 
     let matchedCount = 0;
 
     checkboxes.forEach((chk) => {
-      const name = (chk.value || '').trim();
-      const pn = (chk.dataset.pn || '').trim();
+      const name = (chk.value || '').trim().toUpperCase();
 
       if (!name || name.includes("ONLY SELECT WHEN NOTHING") || name.includes("DO NOT USE")) return;
 
       let isMatch = false;
 
-      // PASS 1: PART NUMBER MATCH (Direct Hit)
-      if (pn && pn !== "N/A" && pn !== "LABOR" && pn.length >= 4) {
-        const cleanPn = pn.replace(/[^A-Z0-9]/gi, '');
-        if (compressedOcr.includes(cleanPn)) {
+      const has = (...terms) => terms.every(t => normText.includes(t.toUpperCase()));
+      const hasAny = (...terms) => terms.some(t => normText.includes(t.toUpperCase()));
+      const cHas = (...terms) => terms.every(t => compressedText.includes(t.toUpperCase().replace(/[^A-Z0-9]/g, '')));
+
+      // 1. HSG, BATTERY COMPARTMENT
+      if (name.includes("HSG, BATTERY COMPARTMENT")) {
+        if ((has("BATTERY") || has("COMPARTMENT")) && (has("HSG") || has("HOUSING")) &&
+            !has("GASKET") && !has("CONTACT") && !has("DOOR") && !has("STABILIZER")) {
           isMatch = true;
         }
       }
-
-      // PASS 2: SPECIFIC PART KEYWORD RULE MATCH
-      if (!isMatch) {
-        const uName = name.toUpperCase();
-
-        if (uName.includes("HSG, BATTERY COMPARTMENT")) {
-          isMatch = (cleanOcr.includes("HSG") || cleanOcr.includes("HOUSING")) && 
-                    cleanOcr.includes("BATTERY") && 
-                    !cleanOcr.includes("GASKET") && !cleanOcr.includes("CONTACT") && !cleanOcr.includes("DOOR");
-        }
-        else if (uName.includes("DOOR AY, BATTERY, PUMP")) {
-          isMatch = cleanOcr.includes("DOOR") && (cleanOcr.includes("BATTERY") || cleanOcr.includes("PUMP"));
-        }
-        else if (uName.includes("SEAL, DSO, NEOPRENE")) {
-          isMatch = cleanOcr.includes("NEOPRENE") || (cleanOcr.includes("SEAL") && cleanOcr.includes("DSO"));
-        }
-        else if (uName.includes("21-2101-08")) {
-          isMatch = compressedOcr.includes("21210108") || (cleanOcr.includes("OVERLAY") && cleanOcr.includes("KEYPAD"));
-        }
-        else if (uName.includes("KEYPAD, MEMBRANE SW")) {
-          isMatch = cleanOcr.includes("KEYPAD") && !cleanOcr.includes("OVERLAY");
-        }
-        else if (uName.includes("LBL, SET, DEVICE")) {
-          isMatch = cleanOcr.includes("SET") && (cleanOcr.includes("LBL") || cleanOcr.includes("LABEL"));
-        }
-        else if (uName.includes("LENS, PAD PRINTED")) {
-          isMatch = cleanOcr.includes("LENS") || (cleanOcr.includes("PAD") && cleanOcr.includes("PRINTED"));
+      // 2. DOOR AY, BATTERY, PUMP
+      else if (name.includes("DOOR AY, BATTERY, PUMP")) {
+        if (has("DOOR") && (has("BATTERY") || has("PUMP"))) {
+          isMatch = true;
         }
       }
+      // 3. SEAL, DSO, NEOPRENE
+      else if (name.includes("SEAL, DSO, NEOPRENE")) {
+        if (has("NEOPRENE") || (has("SEAL") && (has("DSO") || has("DS0")))) {
+          isMatch = true;
+        }
+      }
+      // 4. OVERLAY 21-2101-08
+      else if (name.includes("21-2101-08")) {
+        if (cHas("212101") || (has("OVERLAY") && has("KEYPAD"))) {
+          isMatch = true;
+        }
+      }
+      // 5. OVERLAY, CE ENGLISH
+      else if (name.includes("CE ENGLISH")) {
+        if (has("OVERLAY") && (has("ENGLISH") || has("CE")) && !has("KEYPAD") && !cHas("212101")) {
+          isMatch = true;
+        }
+      }
+      // 6. MODEL 2120 LABELS
+      else if (name.includes("MODEL 2120")) {
+        if (cHas("2120") || has("MODEL")) {
+          if (name.includes("COSTA RICA") && hasAny("COSTA", "RICA")) {
+            isMatch = true;
+          } else if (name.includes("DRK GREY") && hasAny("DRK", "GREY", "GRAY", "DARK")) {
+            isMatch = true;
+          } else if (name.includes("BLUE, RX ONLY") && !name.includes("COSTA RICA") && has("BLUE") && !hasAny("COSTA", "GREY", "GRAY", "DRK", "DARK")) {
+            isMatch = true;
+          }
+        }
+      }
+      // 7. KEYPAD, MEMBRANE SW, W/O CONN
+      else if (name.includes("KEYPAD, MEMBRANE SW")) {
+        if (has("KEYPAD") && (has("MEMBRANE") || has("CONN") || has("SW")) && !has("OVERLAY") && !cHas("212101")) {
+          isMatch = true;
+        }
+      }
+      // 8. LBL, SET, DEVICE
+      else if (name.includes("LBL, SET, DEVICE")) {
+        if (has("SET") && (has("LBL") || has("LABEL") || has("DEVICE"))) {
+          isMatch = true;
+        }
+      }
+      // 9. LENS, PAD PRINTED
+      else if (name.includes("LENS, PAD PRINTED")) {
+        if (has("LENS") || (has("PAD") && has("PRINTED"))) {
+          isMatch = true;
+        }
+      }
+      // 10. MULTI-LINE KEYWORD FALLBACK FOR UNLISTED PARTS
+      else {
+        const noise = ["CADD", "SOLIS", "PUMP", "DEVICE", "MODEL", "VIP", "RX", "ONLY", "3RD", "EDITION", "W", "CUL", "1/EA", "AY", "SW", "REPLACED", "PARTS", "QTY"];
+        const keyTokens = name
+          .replace(/[^A-Z0-9\s]/g, ' ')
+          .split(/\s+/)
+          .filter(t => t.length >= 3 && !noise.includes(t));
 
-      // PASS 3: FUZZY WORD TOKEN OVERLAP (Fallback for custom parts)
-      if (!isMatch) {
-        const stopWords = new Set(["AY", "CADD", "SOLIS", "1/EA", "THE", "AND", "FOR", "PUMP", "W/O", "WITH"]);
-        const tokens = normalize(name)
-          .split(' ')
-          .filter(t => t.length > 2 && !stopWords.has(t));
-
-        if (tokens.length > 0) {
-          const matchedTokens = tokens.filter(token => cleanOcr.includes(token));
-          // If 60% or more distinct key words exist in OCR output, treat as matched
-          if ((matchedTokens.length / tokens.length) >= 0.6) {
+        if (keyTokens.length > 0) {
+          const hits = keyTokens.filter(tok => normText.includes(tok));
+          if (hits.length === keyTokens.length || (keyTokens.length >= 2 && hits.length >= 2)) {
             isMatch = true;
           }
         }
