@@ -326,124 +326,99 @@
     }
   };
 
-  // --- DEDICATED ONE-TO-ONE ROW-BASED OCR MATCHING ENGINE FOR SOLIS ---
+  // --- BENCH-HELPER HIGH-PRECISION OCR MATCHING ENGINE FOR SOLIS ---
   window._otAutoSelectSolis = function(ocrText) {
     if (!ocrText) return 0;
 
-    // 1. Isolate the "PARTS REPLACED" block
-    let partsSection = ocrText;
-    const partsIdx = ocrText.search(/PARTS\s*REPLACED/i);
-    if (partsIdx !== -1) {
-      partsSection = ocrText.substring(partsIdx);
-    }
+    const rawText = ocrText.toUpperCase().trim();
+    const cleanScanText = rawText.replace(/[\s,\-\/]+/g, ' ');
 
-    // 2. Pre-clean text: re-join hyphenated line wraps (e.g. CADD-\nSOLIS -> CADD-SOLIS)
-    let cleanText = partsSection
-      .replace(/([A-Z0-9]+)-\s*[\r\n]+\s*([A-Z0-9]+)/gi, '$1-$2')
-      .replace(/[\r\n]+/g, '\n');
-
-    // 3. Extract non-empty lines, ignoring generic table headers
-    let lines = cleanText.split('\n')
-      .map(l => l.trim())
-      .filter(l => l.length > 0)
-      .filter(l => !/^(TESTING|PARTS\s*REPLACED|QTY|DESCRIPTION|SPEC|RESULT|PVT\s*TEST)/i.test(l));
-
-    // 4. Assemble multi-line table rows into single item entries
-    const rowStartsRegex = /^(HSG|DOOR|SEAL|OVERLAY|LBL|LABEL|KEYPAD|LENS|BEZEL|SENSOR|AIR|GASKET|DISPLAY|CONNECTOR|BRACKET|FLEX|CAMSHAFT|BEARING|GEAR|INSULATOR|PLATE|PIN|STABILIZER|SOLIS|VALVE|NLT|ADHESIVE|CONTACT|DISK|EXPULSOR|FOAM|GUARD|HANDLE|HARNESS|LATCH|PAD|PCBA|STRIP|SWITCH|TAB|TAPE)\b/i;
-
-    let rowEntries = [];
-    let currentEntry = "";
-
-    lines.forEach(line => {
-      let cleanLine = line.replace(/^\d+[\s\t\|]*/, '').trim();
-
-      if (rowStartsRegex.test(cleanLine) || /^\d+[\s\t\|]+/.test(line) || !currentEntry) {
-        if (currentEntry) rowEntries.push(currentEntry);
-        currentEntry = cleanLine;
-      } else {
-        currentEntry += " " + cleanLine;
-      }
-    });
-    if (currentEntry) rowEntries.push(currentEntry);
-
-    // 5. Normalization helper for fuzzy OCR comparison
-    const normalize = (str) => {
-      return (str || '')
-        .toUpperCase()
-        .replace(/DS0/g, 'DSO')
-        .replace(/S0LIS/g, 'SOLIS')
-        .replace(/HOUSING/g, 'HSG')
-        .replace(/ASSY/g, 'AY')
-        .replace(/LABEL/g, 'LBL')
-        .replace(/SWITCH/g, 'SW')
-        .replace(/[^A-Z0-9\s]/g, ' ')
-        .replace(/\s+/g, ' ')
-        .trim();
-    };
-
-    const checkboxes = Array.from(box.querySelectorAll('.s_chk'));
     let matchedCount = 0;
+    const checkboxes = box.querySelectorAll('.s_chk');
 
-    // 6. For EACH rowEntry extracted from the paper, find the SINGLE BEST catalog match
-    rowEntries.forEach(rawRow => {
-      const rowNorm = normalize(rawRow);
-      if (rowNorm.length < 3) return;
+    checkboxes.forEach(chk => {
+      const partName = (chk.value || '').toUpperCase().trim();
+      const partPn = (chk.dataset.pn || '').toUpperCase().trim();
 
-      let bestCheckbox = null;
-      let highestScore = 0;
+      if (!partName || partPn === 'LABOR' || partName.includes("ONLY SELECT WHEN NOTHING") || partName.includes("DO NOT USE")) return;
 
-      checkboxes.forEach(chk => {
-        const rawName = (chk.value || '').trim();
-        const pnAttr = (chk.dataset.pn || '').trim();
+      let isMatched = false;
+      const cleanPartName = partName.replace(/[\s,\-\/]+/g, ' ');
 
-        // Skip non-physical items or obsolete items
-        if (!rawName || pnAttr === 'LABOR' || rawName.includes("ONLY SELECT WHEN NOTHING") || rawName.includes("DO NOT USE")) return;
+      // Exact substring clean match
+      if (cleanScanText.includes(cleanPartName)) {
+        isMatched = true;
+      }
 
-        const nameNorm = normalize(rawName);
+      // 1. HSG, BATTERY COMPARTMENT
+      if (partName === 'HSG, BATTERY COMPARTMENT' && rawText.includes("BATTERY") && rawText.includes("COMPARTMENT")) {
+        isMatched = true;
+      }
 
-        // Tokenize catalog name into key words (excluding generic Solis filler words)
-        const stopWords = ['CADD', 'SOLIS', 'PUMP', 'DEVICE', '1/EA', 'W', 'RX', 'ONLY'];
-        const tokens = nameNorm.split(' ').filter(t => t.length >= 2 && !stopWords.includes(t));
+      // 2. DOOR AY, BATTERY, PUMP
+      if (partName === 'DOOR AY, BATTERY, PUMP' && ((rawText.includes("DOOR") && (rawText.includes("BATTERY") || rawText.includes("PUMP"))) || rawText.includes("30-3245"))) {
+        isMatched = true;
+      }
 
-        if (tokens.length === 0) return;
+      // 3. SEAL, DSO, NEOPRENE
+      if (partName === 'SEAL, DSO, NEOPRENE' && (rawText.includes("NEOPRENE") || (rawText.includes("SEAL") && (rawText.includes("DSO") || rawText.includes("DS0"))) || rawText.includes("30-4085") || rawText.includes("30-3381"))) {
+        isMatched = true;
+      }
 
-        let matchedTokens = 0;
-        tokens.forEach(t => {
-          const wordRegex = new RegExp(`(?:^|\\s)${t}(?:\\s|$)`, 'i');
-          if (wordRegex.test(rowNorm) || rowNorm.includes(t)) {
-            matchedTokens++;
-          }
-        });
+      // 4. OVERLAY, MEMBRANE SWITCH (KEYPAD), CADD-SOLIS, 21-2101-08
+      if (partName.includes('21-2101-08') && (rawText.includes("21-2101") || rawText.includes("212101") || (rawText.includes("OVERLAY") && rawText.includes("KEYPAD")) || rawText.includes("40-5482-51A"))) {
+        isMatched = true;
+      }
 
-        const matchRatio = matchedTokens / tokens.length;
+      // OVERLAY, MEMBRANE SWITCH, CE ENGLISH
+      if (partName === 'OVERLAY, MEMBRANE SWITCH, CE ENGLISH' && rawText.includes("OVERLAY") && (rawText.includes("ENGLISH") || rawText.includes("CE")) && !rawText.includes("KEYPAD") && !rawText.includes("21-2101")) {
+        isMatched = true;
+      }
 
-        // Require at least 60% of key tokens to be present
-        if (matchRatio >= 0.6) {
-          // Base score: percentage of matched tokens + length of catalog string (rewards more specific matches)
-          let score = (matchRatio * 100) + (rawName.length * 0.5);
-
-          // Specificity Bonuses & Penalties
-          if (nameNorm.includes('2120') && rowNorm.includes('2120')) score += 40;
-          if (nameNorm.includes('COSTA') && rowNorm.includes('COSTA')) score += 40;
-          if (nameNorm.includes('DRK') && (rowNorm.includes('DRK') || rowNorm.includes('GREY') || rowNorm.includes('GRAY'))) score += 40;
-          if (nameNorm.includes('21 2101') && (rowNorm.includes('21 2101') || rowNorm.includes('212101'))) score += 50;
-
-          // Penalty: if catalog item does NOT have '2120' but the OCR line explicitly specifies '2120'
-          if (!nameNorm.includes('2120') && rowNorm.includes('2120')) score -= 50;
-
-          // Penalty: if catalog item is 'CE ENGLISH' but OCR line specifies 'KEYPAD' or '21-2101'
-          if (nameNorm.includes('CE') && (rowNorm.includes('KEYPAD') || rowNorm.includes('212101') || rowNorm.includes('21 2101'))) score -= 50;
-
-          if (score > highestScore && score >= 50) {
-            highestScore = score;
-            bestCheckbox = chk;
-          }
+      // 5. BLUE MODEL LABEL
+      if (partName.includes("MODEL 2120") && partName.includes("BLUE, RX ONLY") && !partName.includes("COSTA RICA")) {
+        if (rawText.includes("MODEL 2120") && rawText.includes("BLUE") && !rawText.includes("COSTA") && !rawText.includes("DRK") && !rawText.includes("GREY")) {
+          isMatched = true;
         }
-      });
+      }
 
-      if (bestCheckbox && !bestCheckbox.checked) {
-        bestCheckbox.checked = true;
-        bestCheckbox.dispatchEvent(new Event('change', { bubbles: true }));
+      // COSTA RICA LABEL
+      if (partName.includes("MODEL 2120") && partName.includes("COSTA RICA")) {
+        if (rawText.includes("MODEL 2120") && (rawText.includes("COSTA") || rawText.includes("RICA"))) {
+          isMatched = true;
+        }
+      }
+
+      // 6. DARK GREY MODEL LABEL
+      if (partName.includes("MODEL 2120") && partName.includes("DRK GREY, RX ONLY")) {
+        if (rawText.includes("MODEL 2120") && (rawText.includes("DRK") || rawText.includes("GREY") || rawText.includes("GRAY"))) {
+          isMatched = true;
+        }
+      }
+
+      // 7. KEYPAD, MEMBRANE SW, W/O CONN
+      if (partName === 'KEYPAD, MEMBRANE SW, W/O CONN, CADD-SOLIS' && ((rawText.includes("KEYPAD") && (rawText.includes("MEMBRANE") || rawText.includes("W/O CONN") || rawText.includes("CONN"))) || rawText.includes("70-0229"))) {
+        isMatched = true;
+      }
+
+      // 8. LBL, SET, DEVICE, CADD-SOLIS
+      if (partName.includes('LBL, SET, DEVICE') && ((rawText.includes("LBL") && rawText.includes("SET")) || (rawText.includes("LABEL") && rawText.includes("SET")) || rawText.includes("40-6288-24A"))) {
+        isMatched = true;
+      }
+
+      // 9. LENS, PAD PRINTED, CADD SOLIS
+      if (partName.includes('LENS, PAD PRINTED') && ((rawText.includes("LENS") && (rawText.includes("PAD") || rawText.includes("PRINTED"))) || rawText.includes("40-5733-51A"))) {
+        isMatched = true;
+      }
+
+      // Part Number Fallback Matcher
+      if (partPn && partPn !== 'N/A' && partPn.length >= 4 && rawText.includes(partPn)) {
+        isMatched = true;
+      }
+
+      if (isMatched && !chk.checked) {
+        chk.checked = true;
+        chk.dispatchEvent(new Event('change', { bubbles: true }));
         matchedCount++;
       }
     });
