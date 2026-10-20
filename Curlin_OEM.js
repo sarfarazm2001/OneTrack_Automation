@@ -51,16 +51,37 @@
   overlay.style.cssText = "position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.7);z-index:999999;display:flex;align-items:center;justify-content:center;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;";
 
   let box = document.createElement("div");
-  box.style.cssText = "background:#1e232a;padding:20px;border-radius:10px;box-shadow:0 8px 32px rgba(0,0,0,0.6);width:520px;text-align:left;color:#f1f3f5;border:1px solid #2d333b;";
+  box.style.cssText = "background:#1e232a;padding:20px;border-radius:10px;box-shadow:0 8px 32px rgba(0,0,0,0.6);width:540px;text-align:left;color:#f1f3f5;border:1px solid #2d333b;";
 
   let html = `
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
-      <h3 style="margin:0;font-size:16px;font-weight:700;color:#fff;">Curlin Billing Calculator</h3>
+      <h3 style="margin:0;font-size:16px;font-weight:700;color:#fff;">Curlin Billing Calculator & 2K Scanner</h3>
       <span id="c_close_btn" style="cursor:pointer;font-size:18px;color:#8b949e;">&times;</span>
     </div>
     
+    <!-- 2K Scanner Toggle Button -->
+    <button id="c_scan_toggle_btn" style="width:100%;padding:9px;margin-bottom:10px;background:#1f6feb;color:#fff;border:none;border-radius:6px;cursor:pointer;font-weight:700;font-size:12px;">
+      📷 Open 2K HD Document Scanner
+    </button>
+
+    <!-- Scanner Viewfinder Container -->
+    <div id="c_scanner_container" style="display:none;background:#161b22;padding:12px;border-radius:6px;border:1px dashed #30363d;margin-bottom:10px;text-align:center;">
+      <div id="c_drop_area" style="cursor:pointer;padding:10px;border:1px dashed #484f58;border-radius:4px;margin-bottom:8px;background:#0d1117;font-size:11px;color:#8b949e;">
+        📷 Drag & drop image here, paste (<code style="color:#58a6ff;">Ctrl+V</code>), or click to upload
+        <input type="file" id="c_file_input" accept="image/*" style="display:none;">
+      </div>
+      <video id="c_video_element" autoplay playsinline title="Click video stream to refocus" style="width:100%;max-height:200px;border-radius:4px;background:#000;display:none;margin-bottom:8px;cursor:pointer;border:1px solid #30363d;"></video>
+      <div style="display:flex;gap:8px;justify-content:center;">
+        <button id="c_start_cam_btn" style="flex:1;padding:7px;background:#238636;color:#fff;border:none;border-radius:5px;cursor:pointer;font-weight:600;font-size:11px;">📷 Start 2K Camera</button>
+        <button id="c_capture_btn" style="flex:1;padding:7px;background:#1f6feb;color:#fff;border:none;border-radius:5px;cursor:pointer;font-weight:600;font-size:11px;display:none;">📸 Snap & Process High-Res</button>
+      </div>
+    </div>
+
+    <!-- Status Toast -->
+    <div id="c_toast" style="display:none;padding:6px 10px;background:#17a2b8;color:#fff;border-radius:4px;font-size:11px;font-weight:bold;margin-bottom:10px;text-align:center;"></div>
+
     <!-- Controls Bar -->
-    <div style="display:flex;gap:8px;margin-bottom:12px;">
+    <div style="display:flex;gap:8px;margin-bottom:10px;">
       <input type="text" id="c_search_input" placeholder="🔍 Search parts..." style="flex:1;padding:8px 10px;background:#0d1117;color:#fff;border:1px solid #30363d;border-radius:6px;font-size:12px;">
       <button id="c_add_btn" style="padding:8px 14px;background:#238636;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:12px;font-weight:bold;">+ Add Part</button>
     </div>
@@ -69,24 +90,193 @@
     <div style="display:flex;gap:8px;margin-bottom:12px;">
       <button id="c_export_btn" style="flex:1;padding:8px;background:#3b5998;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:11px;font-weight:bold;">📤 Export Source (.js)</button>
       <button id="c_import_btn" style="flex:1;padding:8px;background:#6f42c1;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:11px;font-weight:bold;">📥 Import Parts File</button>
-      <input type="file" id="c_file_input" accept=".js,.json" style="display:none;">
+      <input type="file" id="c_file_input_script" accept=".js,.json" style="display:none;">
     </div>
 
     <!-- Parts List Container -->
-    <div id="c_parts_list" style="max-height:260px;overflow-y:auto;margin-bottom:14px;background:#0d1117;border:1px solid #30363d;border-radius:6px;padding:6px;"></div>
+    <div id="c_parts_list" style="max-height:220px;overflow-y:auto;margin-bottom:14px;background:#0d1117;border:1px solid #30363d;border-radius:6px;padding:6px;"></div>
 
     <!-- Action Buttons -->
     <div style="display:flex;gap:8px;">
-      <button id="c_reset" style="padding:10px 14px;background:#30363d;color:#e6edf3;border:1px solid #484f58;border-radius:6px;cursor:pointer;font-size:12px;font-weight:bold;">↺ Reset</button>
-      <button id="c_back" style="padding:10px 14px;background:#30363d;color:#e6edf3;border:1px solid #484f58;border-radius:6px;cursor:pointer;font-size:12px;font-weight:bold;">← Back</button>
+      <button id="c_reset" style="padding:10px 12px;background:#30363d;color:#e6edf3;border:1px solid #484f58;border-radius:6px;cursor:pointer;font-size:12px;font-weight:bold;">↺ Reset</button>
+      <button id="c_back" style="padding:10px 12px;background:#30363d;color:#e6edf3;border:1px solid #484f58;border-radius:6px;cursor:pointer;font-size:12px;font-weight:bold;">← Back</button>
       <button id="c_copy" style="flex:1;padding:10px;background:#238636;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:12px;font-weight:bold;">Apply Findings</button>
-      <button id="c_cancel" style="padding:10px 14px;background:#da3633;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:12px;font-weight:bold;">Cancel</button>
+      <button id="c_cancel" style="padding:10px 12px;background:#da3633;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:12px;font-weight:bold;">Cancel</button>
     </div>
   `;
 
   box.innerHTML = html;
   overlay.appendChild(box);
   document.body.appendChild(overlay);
+
+  let mediaStream = null;
+  const scanToggleBtn = box.querySelector("#c_scan_toggle_btn");
+  const scannerContainer = box.querySelector("#c_scanner_container");
+  const dropArea = box.querySelector("#c_drop_area");
+  const fileInput = box.querySelector("#c_file_input");
+  const videoElement = box.querySelector("#c_video_element");
+  const startCamBtn = box.querySelector("#c_start_cam_btn");
+  const captureBtn = box.querySelector("#c_capture_btn");
+  const toast = box.querySelector("#c_toast");
+
+  function showToast(msg) {
+    toast.innerText = msg;
+    toast.style.display = "block";
+  }
+
+  scanToggleBtn.onclick = () => {
+    if (scannerContainer.style.display === "none") {
+      scannerContainer.style.display = "block";
+      scanToggleBtn.innerText = "❌ Close Scanner Viewfinder";
+    } else {
+      if (mediaStream) mediaStream.getTracks().forEach(t => t.stop());
+      videoElement.style.display = "none";
+      captureBtn.style.display = "none";
+      scannerContainer.style.display = "none";
+      scanToggleBtn.innerText = "📷 Open 2K HD Document Scanner";
+    }
+  };
+
+  videoElement.onclick = async () => {
+    if (!mediaStream) return;
+    const track = mediaStream.getVideoTracks()[0];
+    if (track && track.getCapabilities) {
+      const caps = track.getCapabilities();
+      if (caps.focusMode) {
+        try {
+          showToast("🎯 Triggering refocus...");
+          await track.applyConstraints({ advanced: [{ focusMode: 'single-shot' }] });
+          setTimeout(() => {
+            track.applyConstraints({ advanced: [{ focusMode: 'continuous' }] });
+            showToast("Camera active. Frame document and click Snap & Process.");
+          }, 400);
+        } catch (e) {}
+      }
+    }
+  };
+
+  startCamBtn.onclick = async () => {
+    try {
+      showToast("Initializing 2K camera stream...");
+      mediaStream = await navigator.mediaDevices.getUserMedia({
+        video: {
+          width: { ideal: 2560, min: 1920 },
+          height: { ideal: 1440, min: 1080 },
+          facingMode: { ideal: "environment" }
+        }
+      });
+      videoElement.srcObject = mediaStream;
+      videoElement.style.display = "block";
+      captureBtn.style.display = "inline-block";
+
+      const track = mediaStream.getVideoTracks()[0];
+      if (track && track.getCapabilities) {
+        const caps = track.getCapabilities();
+        const advanced = [];
+        if (caps.focusMode && caps.focusMode.includes('continuous')) advanced.push({ focusMode: 'continuous' });
+        if (caps.exposureMode && caps.exposureMode.includes('continuous')) advanced.push({ exposureMode: 'continuous' });
+        if (advanced.length > 0) await track.applyConstraints({ advanced }).catch(() => {});
+      }
+
+      showToast("2K Camera Active! Click preview to refocus or click Snap & Process.");
+    } catch (err) {
+      alert("Camera Access Error: " + err.message);
+    }
+  };
+
+  dropArea.onclick = () => fileInput.click();
+  fileInput.onchange = (e) => {
+    if (e.target.files.length > 0) processImageFile(e.target.files[0]);
+  };
+
+  overlay.addEventListener("paste", (e) => {
+    const items = (e.clipboardData || e.originalEvent.clipboardData)?.items;
+    if (items) {
+      for (let item of items) {
+        if (item.type.indexOf("image") !== -1) {
+          processImageFile(item.getAsFile());
+          break;
+        }
+      }
+    }
+  });
+
+  function processImageFile(file) {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      let img = new Image();
+      img.onload = () => {
+        let canvas = document.createElement("canvas");
+        canvas.width = img.width;
+        canvas.height = img.height;
+        let ctx = canvas.getContext("2d");
+        ctx.drawImage(img, 0, 0);
+        runPreprocessedTesseract(canvas);
+      };
+      img.src = e.target.result;
+    };
+    reader.readAsDataURL(file);
+  }
+
+  captureBtn.onclick = () => {
+    let canvas = document.createElement("canvas");
+    canvas.width = videoElement.videoWidth || 2560;
+    canvas.height = videoElement.videoHeight || 1440;
+    let ctx = canvas.getContext("2d");
+    ctx.drawImage(videoElement, 0, 0, canvas.width, canvas.height);
+
+    if (mediaStream) mediaStream.getTracks().forEach(t => t.stop());
+    videoElement.style.display = "none";
+    captureBtn.style.display = "none";
+
+    runPreprocessedTesseract(canvas);
+  };
+
+  function preprocessCanvasForOCR(canvas) {
+    let ctx = canvas.getContext("2d");
+    let imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    let d = imgData.data;
+
+    for (let i = 0; i < d.length; i += 4) {
+      let v = 0.2126 * d[i] + 0.7152 * d[i + 1] + 0.0722 * d[i + 2];
+      v = (v - 128) * 1.5 + 128;
+      v = v < 0 ? 0 : (v > 255 ? 255 : v);
+      d[i] = d[i + 1] = d[i + 2] = v;
+    }
+
+    ctx.putImageData(imgData, 0, 0);
+    return canvas.toDataURL("image/png");
+  }
+
+  async function runPreprocessedTesseract(canvas) {
+    showToast("⚡ Preprocessing 2K image & running Tesseract...");
+    const preprocessedDataUri = preprocessCanvasForOCR(canvas);
+
+    try {
+      if (typeof Tesseract === "undefined") {
+        await new Promise((resolve, reject) => {
+          let script = document.createElement("script");
+          script.src = "https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js";
+          script.onload = resolve;
+          script.onerror = reject;
+          document.head.appendChild(script);
+        });
+      }
+
+      let result = await Tesseract.recognize(preprocessedDataUri, "eng");
+      let rawText = result.data.text ? result.data.text.trim() : "";
+
+      if (rawText) {
+        let count = window._otAutoSelectCurlin(rawText);
+        showToast(`✓ Processed 2K Scan! Auto-selected ${count} part(s).`);
+      } else {
+        alert("No text detected in image.");
+      }
+    } catch (err) {
+      console.error("Tesseract Error:", err);
+      alert("OCR Error: " + err.message);
+    }
+  }
 
   const getCurrentPartsFromDOM = () => {
     const rows = Array.from(document.querySelectorAll("#c_parts_list .part_row"));
@@ -151,7 +341,6 @@
 
   renderPartsList(getStoredParts());
 
-  // Search Filter
   document.getElementById("c_search_input").oninput = (e) => {
     const q = e.target.value.toLowerCase().trim();
     const rows = document.querySelectorAll("#c_parts_list .part_row");
@@ -161,7 +350,6 @@
     });
   };
 
-  // Reset to default initialParts
   document.getElementById("c_reset").onclick = () => {
     if (confirm("Reset Curlin parts list to default?")) {
       saveStoredParts(initialParts);
@@ -199,10 +387,10 @@
   };
 
   document.getElementById("c_import_btn").onclick = () => {
-    document.getElementById("c_file_input").click();
+    document.getElementById("c_file_input_script").click();
   };
 
-  document.getElementById("c_file_input").onchange = (e) => {
+  document.getElementById("c_file_input_script").onchange = (e) => {
     const file = e.target.files[0];
     if (!file) return;
     const reader = new FileReader();
@@ -228,7 +416,11 @@
     reader.readAsText(file);
   };
 
-  const closeModal = () => { if (overlay) overlay.remove(); };
+  const closeModal = () => {
+    if (mediaStream) mediaStream.getTracks().forEach(t => t.stop());
+    if (overlay) overlay.remove();
+  };
+
   document.getElementById("c_close_btn").onclick = closeModal;
   document.getElementById("c_cancel").onclick = closeModal;
   
