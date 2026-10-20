@@ -97,6 +97,10 @@
     return initialParts;
   }
 
+  function saveStoredParts(list) {
+    localStorage.setItem("solis_parts_list_v1", JSON.stringify(list));
+  }
+
   function getFreq() {
     try { return JSON.parse(localStorage.getItem('ot_freq_solis') || '{}'); }
     catch(e) { return {}; }
@@ -108,331 +112,202 @@
     localStorage.setItem('ot_freq_solis', JSON.stringify(freq));
   }
 
-  let existing = document.getElementById("solis-calc-modal");
+  function applyTextToDOM(text) {
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).catch((err) => console.warn("Clipboard copy failed:", err));
+    }
+
+    let target = document.querySelector("#addActualFindingsModal textarea") ||
+                 document.getElementById("note") ||
+                 document.querySelector('textarea[name="Notes"]') ||
+                 document.querySelector('textarea[name="Finding"]') ||
+                 document.querySelector("textarea");
+
+    if (target) {
+      target.focus();
+      let setter = Object.getOwnPropertyDescriptor(window.HTMLTextAreaElement.prototype, "value")?.set;
+      if (setter) setter.call(target, text); else target.value = text;
+      target.dispatchEvent(new Event("input", { bubbles: true }));
+      target.dispatchEvent(new Event("change", { bubbles: true }));
+      target.dispatchEvent(new Event("blur", { bubbles: true }));
+    } else {
+      alert("Textarea not found. Findings copied to clipboard!");
+    }
+  }
+
+  const existing = document.getElementById("solis-oem-modal");
   if (existing) existing.remove();
 
-  let overlay = document.createElement("div");
-  overlay.id = "solis-calc-modal";
-  overlay.style.cssText = "position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.6);z-index:99999;display:flex;align-items:center;justify-content:center;font-family:sans-serif;";
+  const overlay = document.createElement("div");
+  overlay.id = "solis-oem-modal";
+  overlay.style.cssText = "position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.7);z-index:9999999;display:flex;align-items:center;justify-content:center;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;";
 
-  let box = document.createElement("div");
-  box.style.cssText = "background:#12161a;padding:20px;border-radius:10px;box-shadow:0 8px 32px rgba(0,0,0,0.6);width:540px;text-align:left;color:#f1f3f5;border:1px solid #2d333b;";
+  const box = document.createElement("div");
+  box.style.cssText = "background:#1e2329;padding:20px;border-radius:10px;box-shadow:0 8px 32px rgba(0,0,0,0.5);width:480px;max-height:85vh;display:flex;flex-direction:column;color:#f1f3f5;border:1px solid #2d333b;";
 
-  let html = `
-    <h3 style="margin-top:0;margin-bottom:12px;font-size:15px;text-align:center;color:#fff;">Select Solis OEM Replaced Parts & Scanner</h3>
-    
-    <button id="s_scan_toggle_btn" style="width:100%;padding:9px;margin-bottom:10px;background:#1f6feb;color:#fff;border:none;border-radius:6px;cursor:pointer;font-weight:700;font-size:12px;">
-      📷 Open 2K HD Document Scanner
-    </button>
-
-    <div id="s_scanner_container" style="display:none;background:#161b22;padding:12px;border-radius:6px;border:1px dashed #30363d;margin-bottom:10px;text-align:center;">
-      <div id="s_drop_area" style="cursor:pointer;padding:10px;border:1px dashed #484f58;border-radius:4px;margin-bottom:8px;background:#0d1117;font-size:11px;color:#8b949e;">
-        📷 Drag & drop image here, paste (<code style="color:#58a6ff;">Ctrl+V</code>), or click to upload
-        <input type="file" id="s_file_input" accept="image/*" style="display:none;">
-      </div>
-      <video id="s_video_element" autoplay playsinline title="Click video stream to trigger refocus" style="width:100%;max-height:220px;border-radius:4px;background:#000;display:none;margin-bottom:8px;cursor:pointer;border:1px solid #30363d;"></video>
-      <div style="display:flex;gap:8px;justify-content:center;">
-        <button id="s_start_cam_btn" style="flex:1;padding:7px;background:#238636;color:#fff;border:none;border-radius:5px;cursor:pointer;font-weight:600;font-size:11px;">📷 Start 2K Camera</button>
-        <button id="s_capture_btn" style="flex:1;padding:7px;background:#1f6feb;color:#fff;border:none;border-radius:5px;cursor:pointer;font-weight:600;font-size:11px;display:none;">📸 Snap & Process High-Res</button>
-      </div>
+  box.innerHTML = `
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+      <h3 style="margin:0;font-size:16px;font-weight:700;color:#fff;">Solis Replaced Parts Generator</h3>
+      <span id="s_close_x" style="cursor:pointer;font-size:20px;color:#8b949e;line-height:1;">&times;</span>
     </div>
 
-    <div id="s_toast" style="display:none;padding:6px 10px;background:#17a2b8;color:#fff;border-radius:4px;font-size:11px;font-weight:bold;margin-bottom:10px;text-align:center;"></div>
+    <!-- Search & Add Part Controls -->
+    <div style="display:flex;gap:6px;margin-bottom:10px;">
+      <input type="text" id="s_search" placeholder="🔍 Search parts..." style="flex:1;padding:8px;background:#161b22;color:#fff;border:1px solid #363d4a;border-radius:4px;font-size:12px;box-sizing:border-box;">
+      <button id="s_add_btn" style="padding:8px 12px;background:#238636;color:#fff;border:none;border-radius:4px;cursor:pointer;font-weight:600;font-size:12px;white-space:nowrap;">➕ Add Part</button>
+    </div>
 
-    <div id="s_parts_list" style="max-height:240px;overflow-y:auto;margin-bottom:12px;background:#0d1117;padding:6px;border-radius:6px;border:1px solid #30363d;"></div>
+    <!-- Parts List Box -->
+    <div id="s_parts_list" style="overflow-y:auto;max-height:280px;display:flex;flex-direction:column;gap:6px;padding-right:4px;background:#0d1117;border:1px solid #30363d;border-radius:6px;padding:8px;"></div>
 
-    <div style="display:flex;gap:8px;">
-      <button id="s_copy" style="flex:1.5;padding:10px;background:#238636;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:12px;font-weight:bold;">Confirm Selection</button>
-      <button id="s_cancel" style="flex:1;padding:10px;background:#30363d;color:#e6edf3;border:1px solid #484f58;border-radius:6px;cursor:pointer;font-size:12px;font-weight:bold;">Cancel</button>
+    <!-- Import / Export Controls -->
+    <div style="display:flex;gap:6px;margin-top:10px;padding-top:10px;border-top:1px solid #2d333b;">
+      <button id="s_export_btn" style="flex:1;padding:7px;background:#316dca;color:#fff;border:none;border-radius:4px;cursor:pointer;font-weight:600;font-size:11px;">📤 Export Source (.js)</button>
+      <button id="s_import_btn" style="flex:1;padding:7px;background:#6e40c9;color:#fff;border:none;border-radius:4px;cursor:pointer;font-weight:600;font-size:11px;">📥 Import Parts File</button>
+      <input type="file" id="s_import_file_input" accept=".js,.json" style="display:none;">
+    </div>
+
+    <!-- Bottom Action Buttons -->
+    <div style="display:flex;gap:8px;margin-top:12px;">
+      <button id="s_reset_btn" title="Reset to defaults" style="padding:8px 12px;background:#484f58;color:#fff;border:none;border-radius:4px;cursor:pointer;font-weight:600;font-size:12px;">↺ Reset</button>
+      <button id="s_back" style="flex:1;padding:8px;background:#363d4a;color:#fff;border:none;border-radius:4px;cursor:pointer;font-weight:600;font-size:12px;">← Back</button>
+      <button id="s_copy" style="flex:1.2;padding:8px;background:#238636;color:#fff;border:none;border-radius:4px;cursor:pointer;font-weight:600;font-size:12px;">Apply</button>
+      <button id="s_cancel" style="flex:1;padding:8px;background:#da3633;color:#fff;border:none;border-radius:4px;cursor:pointer;font-weight:600;font-size:12px;">Cancel</button>
     </div>
   `;
 
-  box.innerHTML = html;
   overlay.appendChild(box);
   document.body.appendChild(overlay);
 
-  let mediaStream = null;
-  const scanToggleBtn = box.querySelector("#s_scan_toggle_btn");
-  const scannerContainer = box.querySelector("#s_scanner_container");
-  const dropArea = box.querySelector("#s_drop_area");
-  const fileInput = box.querySelector("#s_file_input");
-  const videoElement = box.querySelector("#s_video_element");
-  const startCamBtn = box.querySelector("#s_start_cam_btn");
-  const captureBtn = box.querySelector("#s_capture_btn");
-  const toast = box.querySelector("#s_toast");
+  const listContainer = document.getElementById("s_parts_list");
 
-  function showToast(msg) {
-    toast.innerText = msg;
-    toast.style.display = "block";
-  }
-
-  scanToggleBtn.onclick = () => {
-    if (scannerContainer.style.display === "none") {
-      scannerContainer.style.display = "block";
-      scanToggleBtn.innerText = "❌ Close Scanner Viewfinder";
-    } else {
-      if (mediaStream) mediaStream.getTracks().forEach(t => t.stop());
-      videoElement.style.display = "none";
-      captureBtn.style.display = "none";
-      scannerContainer.style.display = "none";
-      scanToggleBtn.innerText = "📷 Open 2K HD Document Scanner";
-    }
-  };
-
-  videoElement.onclick = async () => {
-    if (!mediaStream) return;
-    const track = mediaStream.getVideoTracks()[0];
-    if (track && track.getCapabilities) {
-      const caps = track.getCapabilities();
-      if (caps.focusMode) {
-        try {
-          showToast("🎯 Triggering refocus...");
-          await track.applyConstraints({ advanced: [{ focusMode: 'single-shot' }] });
-          setTimeout(() => {
-            track.applyConstraints({ advanced: [{ focusMode: 'continuous' }] });
-            showToast("Camera active. Frame document and click Snap & Process.");
-          }, 400);
-        } catch (e) {}
-      }
-    }
-  };
-
-  startCamBtn.onclick = async () => {
-    try {
-      showToast("Initializing 2K camera stream...");
-      mediaStream = await navigator.mediaDevices.getUserMedia({
-        video: {
-          width: { ideal: 2560, min: 1920 },
-          height: { ideal: 1440, min: 1080 },
-          facingMode: { ideal: "environment" }
-        }
-      });
-      videoElement.srcObject = mediaStream;
-      videoElement.style.display = "block";
-      captureBtn.style.display = "inline-block";
-
-      const track = mediaStream.getVideoTracks()[0];
-      if (track && track.getCapabilities) {
-        const caps = track.getCapabilities();
-        const advanced = [];
-        if (caps.focusMode && caps.focusMode.includes('continuous')) advanced.push({ focusMode: 'continuous' });
-        if (caps.exposureMode && caps.exposureMode.includes('continuous')) advanced.push({ exposureMode: 'continuous' });
-        if (advanced.length > 0) await track.applyConstraints({ advanced }).catch(() => {});
-      }
-
-      showToast("2K Camera Active! Click preview to refocus or click Snap & Process.");
-    } catch (err) {
-      alert("Camera Access Error: " + err.message);
-    }
-  };
-
-  dropArea.onclick = () => fileInput.click();
-  fileInput.onchange = (e) => {
-    if (e.target.files.length > 0) processImageFile(e.target.files[0]);
-  };
-
-  overlay.addEventListener("paste", (e) => {
-    const items = (e.clipboardData || e.originalEvent.clipboardData)?.items;
-    if (items) {
-      for (let item of items) {
-        if (item.type.indexOf("image") !== -1) {
-          processImageFile(item.getAsFile());
-          break;
-        }
-      }
-    }
-  });
-
-  function processImageFile(file) {
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      let img = new Image();
-      img.onload = () => {
-        let canvas = document.createElement("canvas");
-        canvas.width = img.width;
-        canvas.height = img.height;
-        let ctx = canvas.getContext("2d");
-        ctx.drawImage(img, 0, 0);
-        runPreprocessedTesseract(canvas);
-      };
-      img.src = e.target.result;
-    };
-    reader.readAsDataURL(file);
-  }
-
-  captureBtn.onclick = () => {
-    let canvas = document.createElement("canvas");
-    canvas.width = videoElement.videoWidth || 2560;
-    canvas.height = videoElement.videoHeight || 1440;
-    let ctx = canvas.getContext("2d");
-    ctx.drawImage(videoElement, 0, 0, canvas.width, canvas.height);
-
-    if (mediaStream) mediaStream.getTracks().forEach(t => t.stop());
-    videoElement.style.display = "none";
-    captureBtn.style.display = "none";
-
-    runPreprocessedTesseract(canvas);
-  };
-
-  function preprocessCanvasForOCR(canvas) {
-    let ctx = canvas.getContext("2d");
-    let imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-    let d = imgData.data;
-
-    for (let i = 0; i < d.length; i += 4) {
-      let v = 0.2126 * d[i] + 0.7152 * d[i + 1] + 0.0722 * d[i + 2];
-      v = (v - 128) * 1.5 + 128;
-      v = v < 0 ? 0 : (v > 255 ? 255 : v);
-      d[i] = d[i + 1] = d[i + 2] = v;
-    }
-
-    ctx.putImageData(imgData, 0, 0);
-    return canvas.toDataURL("image/png");
-  }
-
-  async function runPreprocessedTesseract(canvas) {
-    showToast("⚡ Preprocessing 2K image & running Tesseract...");
-    const preprocessedDataUri = preprocessCanvasForOCR(canvas);
-
-    try {
-      if (typeof Tesseract === "undefined") {
-        await new Promise((resolve, reject) => {
-          let script = document.createElement("script");
-          script.src = "https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js";
-          script.onload = resolve;
-          script.onerror = reject;
-          document.head.appendChild(script);
-        });
-      }
-
-      let result = await Tesseract.recognize(preprocessedDataUri, "eng");
-      let rawText = result.data.text ? result.data.text.trim() : "";
-
-      if (rawText) {
-        let count = window._otAutoSelectSolis(rawText);
-        showToast(`✓ Processed 2K Scan! Auto-selected ${count} part(s).`);
-      } else {
-        alert("No text detected in image.");
-      }
-    } catch (err) {
-      console.error("Tesseract Error:", err);
-      alert("OCR Error: " + err.message);
-    }
-  }
-
-  function tokenize(str) {
-    if (!str) return [];
-    let t = str.toUpperCase()
-      .replace(/\bHSG\b/g, 'HOUSING')
-      .replace(/\bAY\b/g, 'ASSEMBLY')
-      .replace(/\bASSY\b/g, 'ASSEMBLY')
-      .replace(/\bSW\b/g, 'SWITCH')
-      .replace(/\bCOMP\b/g, 'COMPARTMENT')
-      .replace(/\bLBL\b/g, 'LABEL')
-      .replace(/\bSHLD\b/g, 'SHIELD')
-      .replace(/\bGND\b/g, 'GROUND')
-      .replace(/\bBAT\b/g, 'BATTERY')
-      .replace(/\bCONN\b/g, 'CONNECTOR');
-
-    const words = t.match(/[A-Z0-9]+/g) || [];
-    const stopWords = new Set(['1', 'EA', 'WITH', 'WO', 'FOR', 'AND', 'THE', 'OF', 'IN', 'ON', 'TO']);
-    return words.filter(w => !stopWords.has(w));
-  }
-
-  // --- LINE-BY-LINE FUZZY BEST-MATCH SCORING ENGINE ---
-  window._otAutoSelectSolis = function(ocrText) {
-    if (!ocrText || typeof ocrText !== "string") return 0;
-
-    const checkboxes = Array.from(box.querySelectorAll(".s_chk"));
-    if (!checkboxes || checkboxes.length === 0) return 0;
-
-    // Split OCR text into individual lines
-    const rawLines = ocrText.split(/[\r\n;]+/);
-    const headerWords = new Set(['SERVICE', 'WORK', 'ORDER', 'PARTS', 'REPLACED', 'DESCRIPTION', 'QTY', 'QUANTITY', 'PAGE', 'TOTAL', 'REPORT']);
-
-    let matchedSet = new Set();
-
-    rawLines.forEach((line) => {
-      const lineTokens = tokenize(line);
-      if (!lineTokens || lineTokens.length === 0) return;
-
-      // Ignore standard header lines
-      if (lineTokens.every(t => headerWords.has(t))) return;
-
-      let bestChk = null;
-      let bestScore = 0;
-
-      checkboxes.forEach((chk) => {
-        const name = (chk.value || '').trim().toUpperCase();
-        if (!name || name.includes("ONLY SELECT WHEN NOTHING") || name.includes("DO NOT USE")) return;
-
-        const partTokens = tokenize(name);
-        if (partTokens.length === 0) return;
-
-        let matches = 0;
-        partTokens.forEach(pt => {
-          if (lineTokens.some(lt => pt === lt || (len(pt) >= 3 && (pt.includes(lt) || lt.includes(pt))))) {
-            matches++;
-          }
-        });
-
-        function len(s) { return s ? s.length : 0; }
-
-        let dice = (2.0 * matches) / (partTokens.length + lineTokens.length);
-        let coverage = matches / partTokens.length;
-        let score = (dice * 0.5) + (coverage * 0.5);
-
-        if (score > bestScore && score >= 0.45) {
-          bestScore = score;
-          bestChk = chk;
-        }
-      });
-
-      if (bestChk) {
-        matchedSet.add(bestChk);
-      }
-    });
-
-    matchedSet.forEach((chk) => {
-      if (!chk.checked) {
-        chk.checked = true;
-        chk.dispatchEvent(new Event("change", { bubbles: true }));
-      }
-    });
-
-    return matchedSet.size;
-  };
-
-  const renderPartsList = (partsData) => {
-    let listContainer = document.getElementById("s_parts_list");
+  function renderParts(filter = "") {
     listContainer.innerHTML = "";
-    
-    let freq = getFreq();
-    partsData.sort((a, b) => (freq[b] || 0) - (freq[a] || 0));
+    const partsList = getStoredParts();
+    const freq = getFreq();
 
-    partsData.forEach((partName) => {
-      let row = document.createElement("div");
-      row.className = "part_row";
-      row.style.cssText = "display:flex;align-items:center;justify-content:space-between;padding:5px 0;font-size:12px;border-bottom:1px solid #21262d;";
-      row.innerHTML = `
-        <label style="display:flex;align-items:center;cursor:pointer;flex:1;color:#c9d1d9;">
-          <input type="checkbox" class="s_chk" value="${partName}" style="margin-right:8px;transform:scale(1.1);flex-shrink:0;">
-          <span class="desc_txt">${partName}</span>
-        </label>
-      `;
+    // Dynamic sorting based on frequency of use
+    partsList.sort((a, b) => (freq[b] || 0) - (freq[a] || 0));
+
+    partsList.forEach((partName) => {
+      if (filter && !partName.toLowerCase().includes(filter.toLowerCase())) return;
+
+      const row = document.createElement("div");
+      row.style.cssText = "display:flex;align-items:center;justify-content:space-between;background:#161b22;border:1px solid #30363d;border-radius:5px;padding:6px 8px;";
+
+      const labelGroup = document.createElement("label");
+      labelGroup.style.cssText = "display:flex;align-items:center;gap:8px;font-size:12px;color:#e6edf3;cursor:pointer;flex:1;";
+
+      const checkbox = document.createElement("input");
+      checkbox.type = "checkbox";
+      checkbox.className = "s_chk";
+      checkbox.value = partName;
+      checkbox.style.cssText = "transform:scale(1.1);cursor:pointer;";
+
+      const labelText = document.createElement("span");
+      labelText.textContent = partName;
+
+      labelGroup.appendChild(checkbox);
+      labelGroup.appendChild(labelText);
+      row.appendChild(labelGroup);
+
+      // Edit / Delete buttons
+      const btnGroup = document.createElement("div");
+      btnGroup.style.cssText = "display:flex;gap:4px;margin-left:8px;";
+
+      const delBtn = document.createElement("button");
+      delBtn.textContent = "✕";
+      delBtn.title = "Delete Part";
+      delBtn.style.cssText = "background:transparent;color:#da3633;border:none;cursor:pointer;font-weight:bold;font-size:12px;padding:2px 6px;";
+      delBtn.onclick = (e) => {
+        e.stopPropagation();
+        const current = getStoredParts().filter(p => p !== partName);
+        saveStoredParts(current);
+        renderParts(document.getElementById("s_search").value);
+      };
+
+      btnGroup.appendChild(delBtn);
+      row.appendChild(btnGroup);
+
       listContainer.appendChild(row);
     });
+  }
+
+  renderParts();
+
+  // Real-time Search Listener
+  document.getElementById("s_search").addEventListener("input", (e) => {
+    renderParts(e.target.value);
+  });
+
+  // Add Custom Part Listener
+  document.getElementById("s_add_btn").onclick = () => {
+    const name = prompt("Enter New Part Description:");
+    if (!name || !name.trim()) return;
+
+    const list = getStoredParts();
+    list.unshift(name.trim());
+    saveStoredParts(list);
+    renderParts(document.getElementById("s_search").value);
   };
 
-  renderPartsList(getStoredParts());
-
-  document.getElementById("s_cancel").onclick = () => {
-    if (mediaStream) mediaStream.getTracks().forEach(t => t.stop());
-    document.body.removeChild(overlay);
+  // Reset to Defaults
+  document.getElementById("s_reset_btn").onclick = () => {
+    if (confirm("Reset all parts back to initial defaults?")) {
+      saveStoredParts(initialParts);
+      renderParts(document.getElementById("s_search").value);
+    }
   };
 
+  // Export Script
+  document.getElementById("s_export_btn").onclick = () => {
+    const currentParts = getStoredParts();
+    let scriptContent = runSolisCalc.toString();
+    scriptContent = `(${scriptContent})();`;
+    scriptContent = scriptContent.replace(/const initialParts = \[\s[\s\S]*?\];/, `const initialParts = ${JSON.stringify(currentParts, null, 2)};`);
+
+    const blob = new Blob([scriptContent], { type: "application/javascript;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = "Solis_OEM_Generator.js";
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
+  // Import Script / Parts List
+  const fileInput = document.getElementById("s_import_file_input");
+  document.getElementById("s_import_btn").onclick = () => fileInput.click();
+
+  fileInput.onchange = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      try {
+        const text = event.target.result;
+        const arrayMatch = text.match(/const initialParts = (\[[\s\S]*?\]);/);
+        const imported = arrayMatch ? JSON.parse(arrayMatch[1]) : JSON.parse(text);
+
+        if (Array.isArray(imported) && imported.length > 0) {
+          const cleaned = imported.map(p => typeof p === 'string' ? p : (p.name || p));
+          saveStoredParts(cleaned);
+          renderParts(document.getElementById("s_search").value);
+          alert(`Successfully imported ${cleaned.length} parts!`);
+        } else throw new Error("Invalid format");
+      } catch (err) {
+        alert("Failed to parse imported file. Upload a valid .js or .json file.");
+      }
+    };
+    reader.readAsText(file);
+    fileInput.value = "";
+  };
+
+  // Apply Action
   document.getElementById("s_copy").onclick = () => {
-    if (mediaStream) mediaStream.getTracks().forEach(t => t.stop());
     let checkedBoxes = Array.from(box.querySelectorAll(".s_chk:checked"));
     checkedBoxes.forEach(cb => recordUsage(cb.value));
 
@@ -440,9 +315,9 @@
     let physicalParts = checkedBoxes.map(cb => cb.value).filter(name => name !== laborPartName);
     let hasLabor = checkedBoxes.some(cb => cb.value === laborPartName);
 
-    let text = "";
     const testBlock = "Visual Inspection, Pump Power Up Test, Motor Test, Remote Dose Test, Keypad Test, Latch Lock Test, Disposable Test, Air Detector Test, Verify Air Detector Height, LCD Screen Inspection, Amber Green and LED Functional Test, Adjust LCD POT Screen, Downstream Occlusion Test, Upstream Occlusion Sensor Test, Battery Fallout Test, 50ml Cassette Test, Go_No_Go Test, and Delivery Accuracy Test 20mL.";
 
+    let text = "";
     if (hasLabor && physicalParts.length === 0) {
       text = `The OEM certifies that the device passes the following: ${testBlock}`;
     } else if (physicalParts.length > 0) {
@@ -451,27 +326,19 @@
       text = `The OEM certifies that the device passes the following: ${testBlock}`;
     }
 
-    if (navigator.clipboard && navigator.clipboard.writeText) {
-      navigator.clipboard.writeText(text).catch((err) => console.warn("Clipboard copy failed:", err));
-    }
-
-    document.body.removeChild(overlay);
-
-    let target = document.querySelector("#addActualFindingsModal textarea") || document.getElementById("note") || document.querySelector('textarea[name="Notes"]') || document.querySelector("textarea");
-    if (target) {
-      target.focus();
-      let setter = Object.getOwnPropertyDescriptor(window.HTMLTextAreaElement.prototype, "value").set;
-      if (setter) setter.call(target, text); else target.value = text;
-      target.dispatchEvent(new Event("input", { bubbles: true }));
-      target.dispatchEvent(new Event("change", { bubbles: true }));
-      target.dispatchEvent(new Event("blur", { bubbles: true }));
-    } else {
-      alert("Textarea not found. Findings copied to clipboard!");
-    }
+    applyTextToDOM(text);
+    overlay.remove();
   };
 
-  window._otCurrentOEMTool = {
-    id: 'solis',
-    autoSelect: window._otAutoSelectSolis
+  const close = () => overlay.remove();
+  document.getElementById("s_close_x").onclick = close;
+  document.getElementById("s_cancel").onclick = close;
+  overlay.onclick = (e) => { if (e.target === overlay) close(); };
+
+  document.getElementById("s_back").onclick = () => {
+    close();
+    if (typeof window.openOneTrackToolkit === "function") {
+      window.openOneTrackToolkit();
+    }
   };
 })();
