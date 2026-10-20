@@ -320,9 +320,9 @@
     }
   }
 
-  function normalizeText(txt) {
-    if (!txt) return '';
-    return txt.toUpperCase()
+  function tokenize(str) {
+    if (!str) return [];
+    let t = str.toUpperCase()
       .replace(/\bHSG\b/g, 'HOUSING')
       .replace(/\bAY\b/g, 'ASSEMBLY')
       .replace(/\bASSY\b/g, 'ASSEMBLY')
@@ -333,50 +333,74 @@
       .replace(/\bGND\b/g, 'GROUND')
       .replace(/\bBAT\b/g, 'BATTERY')
       .replace(/\bCONN\b/g, 'CONNECTOR');
+
+    const words = t.match(/[A-Z0-9]+/g) || [];
+    const stopWords = new Set(['1', 'EA', 'WITH', 'WO', 'FOR', 'AND', 'THE', 'OF', 'IN', 'ON', 'TO']);
+    return words.filter(w => !stopWords.has(w));
   }
 
-  // --- STRICT DISAMBIGUATED MATCHING ENGINE FOR SOLIS ---
+  // --- LINE-BY-LINE FUZZY BEST-MATCH SCORING ENGINE ---
   window._otAutoSelectSolis = function(ocrText) {
     if (!ocrText || typeof ocrText !== "string") return 0;
 
-    const checkboxes = box.querySelectorAll(".s_chk");
+    const checkboxes = Array.from(box.querySelectorAll(".s_chk"));
     if (!checkboxes || checkboxes.length === 0) return 0;
 
-    const normOCR = normalizeText(ocrText);
-    const alphaNumOCR = normOCR.replace(/[^A-Z0-9]/g, ' ');
-    const ocrWords = new Set(alphaNumOCR.split(/\s+/).filter(w => w.length > 0));
+    // Split OCR text into individual lines
+    const rawLines = ocrText.split(/[\r\n;]+/);
+    const headerWords = new Set(['SERVICE', 'WORK', 'ORDER', 'PARTS', 'REPLACED', 'DESCRIPTION', 'QTY', 'QUANTITY', 'PAGE', 'TOTAL', 'REPORT']);
 
-    let matchedCount = 0;
+    let matchedSet = new Set();
 
-    checkboxes.forEach((chk) => {
-      const name = (chk.value || '').trim().toUpperCase();
-      if (!name || name.includes("ONLY SELECT WHEN NOTHING") || name.includes("DO NOT USE")) return;
+    rawLines.forEach((line) => {
+      const lineTokens = tokenize(line);
+      if (!lineTokens || lineTokens.length === 0) return;
 
-      const normName = normalizeText(name);
-      const cleanName = normName.replace(/[^A-Z0-9]/g, ' ');
+      // Ignore standard header lines
+      if (lineTokens.every(t => headerWords.has(t))) return;
 
-      // Only filter out non-distinguishing filler words
-      const stopWords = new Set(['1/EA', 'EA', 'WITH', 'W/O', 'FOR', 'AND', 'THE', 'OF', 'IN', 'ON', 'TO']);
-      const tokens = cleanName.split(/\s+/).filter(w => w.length >= 1 && !stopWords.has(w));
+      let bestChk = null;
+      let bestScore = 0;
 
-      if (tokens.length === 0) return;
+      checkboxes.forEach((chk) => {
+        const name = (chk.value || '').trim().toUpperCase();
+        if (!name || name.includes("ONLY SELECT WHEN NOTHING") || name.includes("DO NOT USE")) return;
 
-      let hits = 0;
-      tokens.forEach(t => {
-        if (ocrWords.has(t) || alphaNumOCR.includes(t)) hits++;
+        const partTokens = tokenize(name);
+        if (partTokens.length === 0) return;
+
+        let matches = 0;
+        partTokens.forEach(pt => {
+          if (lineTokens.some(lt => pt === lt || (len(pt) >= 3 && (pt.includes(lt) || lt.includes(pt))))) {
+            matches++;
+          }
+        });
+
+        function len(s) { return s ? s.length : 0; }
+
+        let dice = (2.0 * matches) / (partTokens.length + lineTokens.length);
+        let coverage = matches / partTokens.length;
+        let score = (dice * 0.5) + (coverage * 0.5);
+
+        if (score > bestScore && score >= 0.45) {
+          bestScore = score;
+          bestChk = chk;
+        }
       });
 
-      // Strict check: 100% of distinguishing tokens must be present
-      if (hits === tokens.length) {
-        if (!chk.checked) {
-          chk.checked = true;
-          chk.dispatchEvent(new Event("change", { bubbles: true }));
-        }
-        matchedCount++;
+      if (bestChk) {
+        matchedSet.add(bestChk);
       }
     });
 
-    return matchedCount;
+    matchedSet.forEach((chk) => {
+      if (!chk.checked) {
+        chk.checked = true;
+        chk.dispatchEvent(new Event("change", { bubbles: true }));
+      }
+    });
+
+    return matchedSet.size;
   };
 
   const renderPartsList = (partsData) => {
