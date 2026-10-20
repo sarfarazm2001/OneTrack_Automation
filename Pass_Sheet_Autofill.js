@@ -86,7 +86,6 @@ javascript:(function(){
         let currentConfig=parseInputFormat(document.getElementById('cfg_txt').value);
         let currentScript=arguments.callee.caller ? arguments.callee.caller.toString() : "";
         
-        // If caller function string is unavailable, rebuild standard wrapper
         let scriptSource = (arguments.callee && arguments.callee.toString().length > 100) 
           ? arguments.callee.toString() 
           : window.te_modal_script_source || "";
@@ -222,9 +221,10 @@ javascript:(function(){
 
     const isCurlin = String(deviceKey).toUpperCase() === 'CURLIN';
     if(isCurlin){
+      let savedCustom = localStorage.getItem('curlin_last_custom_te') || '';
       let customDiv=document.createElement('div');
       customDiv.style.cssText='margin-bottom:16px;border-top:1px solid #2d333b;padding-top:12px;';
-      customDiv.innerHTML=`<div style="font-size:11px;color:#8b949e;margin-bottom:6px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;">CALIBRATED SET WEIGHT AND (IF USED) OTHER TE</div><input id="custom_te_input" type="text" style="width:100%;box-sizing:border-box;padding:9px 10px;background:#0d1117;border:1px solid #30363d;color:#f0f6fc;border-radius:6px;font-size:13px;outline:none;" onfocus="this.style.borderColor='#58a6ff'" onblur="this.style.borderColor='#30363d'">`;
+      customDiv.innerHTML=`<div style="font-size:11px;color:#8b949e;margin-bottom:6px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;">CALIBRATED SET WEIGHT AND (IF USED) OTHER TE</div><input id="custom_te_input" type="text" value="${savedCustom.replace(/"/g, '&quot;')}" style="width:100%;box-sizing:border-box;padding:9px 10px;background:#0d1117;border:1px solid #30363d;color:#f0f6fc;border-radius:6px;font-size:13px;outline:none;" onfocus="this.style.borderColor='#58a6ff'" onblur="this.style.borderColor='#30363d'">`;
       box.appendChild(customDiv);
     }
 
@@ -240,6 +240,7 @@ javascript:(function(){
         const inp = document.getElementById('custom_te_input');
         let customVal=inp ? inp.value.trim() : '';
         if(customVal){
+          localStorage.setItem('curlin_last_custom_te', customVal);
           selected.push(customVal);
         }
       }
