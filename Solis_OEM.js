@@ -320,26 +320,27 @@
     }
   }
 
-  // --- DESCRIPTION-ONLY OCR MATCHING ENGINE ---
+  // --- STRICT 100% TOKEN MATCHING ENGINE FOR SOLIS ---
   window._otAutoSelectSolis = function(ocrText) {
     if (!ocrText || typeof ocrText !== "string") return 0;
 
     const checkboxes = box.querySelectorAll(".s_chk");
     if (!checkboxes || checkboxes.length === 0) return 0;
 
+    // Clean OCR text and standardize common abbreviations
     let cleanOCR = ocrText.toUpperCase()
       .replace(/-\s*[\r\n]+\s*/g, ' ')
-      .replace(/[\r\n]+/g, ' ');
-
-    cleanOCR = cleanOCR
-      .replace(/\bHOUSING\b/g, 'HSG')
-      .replace(/\bASSEMBLY\b/g, 'AY')
-      .replace(/\bASSY\b/g, 'AY')
-      .replace(/\bSWITCH\b/g, 'SW')
-      .replace(/\bCOMPARTMENT\b/g, 'COMP')
-      .replace(/\bLABEL\b/g, 'LBL')
-      .replace(/\bSHIELD\b/g, 'SHLD')
-      .replace(/\bGROUND\b/g, 'GND');
+      .replace(/[\r\n]+/g, ' ')
+      .replace(/\bHSG\b/g, 'HOUSING')
+      .replace(/\bAY\b/g, 'ASSEMBLY')
+      .replace(/\bASSY\b/g, 'ASSEMBLY')
+      .replace(/\bSW\b/g, 'SWITCH')
+      .replace(/\bCOMP\b/g, 'COMPARTMENT')
+      .replace(/\bLBL\b/g, 'LABEL')
+      .replace(/\bSHLD\b/g, 'SHIELD')
+      .replace(/\bGND\b/g, 'GROUND')
+      .replace(/\bBAT\b/g, 'BATTERY')
+      .replace(/\bCONN\b/g, 'CONNECTOR');
 
     const alphaNumOCR = cleanOCR.replace(/[^A-Z0-9\s]/g, ' ');
 
@@ -349,35 +350,34 @@
       const name = (chk.value || '').trim().toUpperCase();
       if (!name || name.includes("ONLY SELECT WHEN NOTHING") || name.includes("DO NOT USE")) return;
 
+      // Standardize abbreviations in part description
       let normName = name
-        .replace(/\bHOUSING\b/g, 'HSG')
-        .replace(/\bASSEMBLY\b/g, 'AY')
-        .replace(/\bASSY\b/g, 'AY')
-        .replace(/\bSWITCH\b/g, 'SW')
-        .replace(/\bCOMPARTMENT\b/g, 'COMP')
-        .replace(/\bLABEL\b/g, 'LBL')
-        .replace(/\bSHIELD\b/g, 'SHLD')
-        .replace(/\bGROUND\b/g, 'GND')
+        .replace(/\bHSG\b/g, 'HOUSING')
+        .replace(/\bAY\b/g, 'ASSEMBLY')
+        .replace(/\bASSY\b/g, 'ASSEMBLY')
+        .replace(/\bSW\b/g, 'SWITCH')
+        .replace(/\bCOMP\b/g, 'COMPARTMENT')
+        .replace(/\bLBL\b/g, 'LABEL')
+        .replace(/\bSHLD\b/g, 'SHIELD')
+        .replace(/\bGND\b/g, 'GROUND')
+        .replace(/\bBAT\b/g, 'BATTERY')
+        .replace(/\bCONN\b/g, 'CONNECTOR')
         .replace(/[^A-Z0-9\s]/g, ' ');
 
-      const stopWords = ['CADD', 'SOLIS', '1/EA', 'EA', 'AY', 'PUMP', 'DEVICE', 'MODEL', '2120', 'VIP', '3RD', 'EDITION', 'CUL', 'BLUE', 'ONLY', 'COSTA', 'RICA', 'BLACK', 'DRK', 'GREY', 'RX', 'W/O', 'CONN', 'WITH'];
+      // Boilerplate words to ignore
+      const stopWords = ['CADD', 'SOLIS', '1/EA', 'EA', 'PUMP', 'DEVICE', 'MODEL', '2120', 'VIP', '3RD', 'EDITION', 'CUL', 'BLUE', 'ONLY', 'COSTA', 'RICA', 'BLACK', 'DRK', 'GREY', 'RX', 'W/O', 'WITH'];
       const tokens = normName.split(/\s+/).filter(w => w.length >= 2 && !stopWords.includes(w));
 
       if (tokens.length === 0) return;
 
+      // Check how many tokens exist in OCR text
       let hits = 0;
       tokens.forEach(t => {
         if (alphaNumOCR.includes(t)) hits++;
       });
 
-      let isMatch = false;
-      if (tokens.length === 1 && hits === 1) {
-        isMatch = true;
-      } else if (tokens.length > 1 && (hits / tokens.length) >= 0.5) {
-        isMatch = true;
-      }
-
-      if (isMatch) {
+      // STRICT CHECK: 100% of tokens must be matched
+      if (hits === tokens.length) {
         if (!chk.checked) {
           chk.checked = true;
           chk.dispatchEvent(new Event("change", { bubbles: true }));
