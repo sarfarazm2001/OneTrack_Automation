@@ -25,7 +25,15 @@
   "Standby Light failure",
   "Cracked Back Case.",
   "Needs baseline calibration.",
-  "Cracked Front Case."
+  "Cracked Front Case.",
+  "Cracked door clasp.",
+  "Broken door clasp.",
+  "Faded SN label.",
+  "Missing SN label.",
+  "Does not turn on unless connected to a charger.",
+  "Does not turn on even when connected to a charger.",
+  "Cracked back panel hinges.",
+  "Broken back panel hinges."
 ];
 
   // Map phrases that require unit values and custom placeholding
