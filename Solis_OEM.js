@@ -83,6 +83,9 @@
     "VALVE, DUAL ACTIVATION, CADD-SOLIS"
   ];
 
+  // Track active selections
+  const selectedParts = new Set();
+
   function getStoredParts() {
     try {
       const stored = localStorage.getItem("solis_parts_list_v1");
@@ -143,12 +146,24 @@
   overlay.style.cssText = "position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.7);z-index:9999999;display:flex;align-items:center;justify-content:center;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;";
 
   const box = document.createElement("div");
-  box.style.cssText = "background:#1e2329;padding:20px;border-radius:10px;box-shadow:0 8px 32px rgba(0,0,0,0.5);width:480px;max-height:85vh;display:flex;flex-direction:column;color:#f1f3f5;border:1px solid #2d333b;";
+  box.style.cssText = "background:#1e2329;padding:20px;border-radius:10px;box-shadow:0 8px 32px rgba(0,0,0,0.5);width:520px;max-height:85vh;display:flex;flex-direction:column;color:#f1f3f5;border:1px solid #2d333b;";
 
   box.innerHTML = `
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
-      <h3 style="margin:0;font-size:16px;font-weight:700;color:#fff;">Solis Replaced Parts Generator</h3>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+      <div style="display:flex;align-items:center;gap:10px;">
+        <h3 style="margin:0;font-size:16px;font-weight:700;color:#fff;">Solis Replaced Parts Generator</h3>
+        <span id="s_badge_count" style="display:none;background:#1f6feb;color:#fff;font-size:11px;padding:2px 8px;border-radius:12px;font-weight:600;">0 selected</span>
+      </div>
       <span id="s_close_x" style="cursor:pointer;font-size:20px;color:#8b949e;line-height:1;">&times;</span>
+    </div>
+
+    <!-- Pinned Always-Visible Selected Items Panel -->
+    <div id="s_selected_panel" style="display:none;background:#161b22;border:1px solid #30363d;border-radius:6px;padding:8px;margin-bottom:10px;max-height:100px;overflow-y:auto;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+        <span style="font-size:11px;font-weight:700;color:#8b949e;text-transform:uppercase;letter-spacing:0.5px;">Selected Parts (<span id="s_selected_num">0</span>):</span>
+        <button id="s_clear_selected" style="background:none;border:none;color:#f85149;font-size:11px;cursor:pointer;padding:0;font-weight:600;">Clear All</button>
+      </div>
+      <div id="s_chips_container" style="display:flex;flex-wrap:wrap;gap:6px;"></div>
     </div>
 
     <!-- Search & Add Part Controls -->
@@ -158,7 +173,7 @@
     </div>
 
     <!-- Parts List Box -->
-    <div id="s_parts_list" style="overflow-y:auto;max-height:280px;display:flex;flex-direction:column;gap:6px;padding-right:4px;background:#0d1117;border:1px solid #30363d;border-radius:6px;padding:8px;"></div>
+    <div id="s_parts_list" style="overflow-y:auto;max-height:240px;display:flex;flex-direction:column;gap:6px;padding-right:4px;background:#0d1117;border:1px solid #30363d;border-radius:6px;padding:8px;"></div>
 
     <!-- Import / Export Controls -->
     <div style="display:flex;gap:6px;margin-top:10px;padding-top:10px;border-top:1px solid #2d333b;">
@@ -180,6 +195,48 @@
   document.body.appendChild(overlay);
 
   const listContainer = document.getElementById("s_parts_list");
+  const chipsContainer = document.getElementById("s_chips_container");
+  const selectedPanel = document.getElementById("s_selected_panel");
+  const badgeCount = document.getElementById("s_badge_count");
+  const selectedNum = document.getElementById("s_selected_num");
+
+  function updateSelectionPanel() {
+    const count = selectedParts.size;
+    
+    if (count > 0) {
+      badgeCount.textContent = `${count} selected`;
+      badgeCount.style.display = "inline-block";
+      selectedNum.textContent = count;
+      selectedPanel.style.display = "block";
+    } else {
+      badgeCount.style.display = "none";
+      selectedPanel.style.display = "none";
+    }
+
+    chipsContainer.innerHTML = "";
+    selectedParts.forEach((partName) => {
+      const chip = document.createElement("span");
+      chip.style.cssText = "background:#1f6feb;color:#fff;font-size:11px;padding:3px 8px;border-radius:12px;display:inline-flex;align-items:center;gap:6px;font-weight:500;";
+      chip.innerHTML = `<span>${partName}</span><span style="cursor:pointer;font-weight:bold;opacity:0.8;">&times;</span>`;
+      
+      chip.querySelector("span:last-child").onclick = () => {
+        selectedParts.delete(partName);
+        updateSelectionPanel();
+        
+        // Sync checkbox in main list if currently rendered
+        const cb = listContainer.querySelector(`input[value="${CSS.escape(partName)}"]`);
+        if (cb) cb.checked = false;
+      };
+
+      chipsContainer.appendChild(chip);
+    });
+  }
+
+  document.getElementById("s_clear_selected").onclick = () => {
+    selectedParts.clear();
+    updateSelectionPanel();
+    listContainer.querySelectorAll(".s_chk").forEach(cb => cb.checked = false);
+  };
 
   function renderParts(filter = "") {
     listContainer.innerHTML = "";
@@ -202,7 +259,14 @@
       checkbox.type = "checkbox";
       checkbox.className = "s_chk";
       checkbox.value = partName;
+      checkbox.checked = selectedParts.has(partName);
       checkbox.style.cssText = "transform:scale(1.1);cursor:pointer;";
+
+      checkbox.onchange = (e) => {
+        if (e.target.checked) selectedParts.add(partName);
+        else selectedParts.delete(partName);
+        updateSelectionPanel();
+      };
 
       const labelText = document.createElement("span");
       labelText.textContent = partName;
@@ -221,6 +285,8 @@
       delBtn.style.cssText = "background:transparent;color:#da3633;border:none;cursor:pointer;font-weight:bold;font-size:12px;padding:2px 6px;";
       delBtn.onclick = (e) => {
         e.stopPropagation();
+        selectedParts.delete(partName);
+        updateSelectionPanel();
         const current = getStoredParts().filter(p => p !== partName);
         saveStoredParts(current);
         renderParts(document.getElementById("s_search").value);
@@ -254,6 +320,8 @@
   // Reset to Defaults
   document.getElementById("s_reset_btn").onclick = () => {
     if (confirm("Reset all parts back to initial defaults?")) {
+      selectedParts.clear();
+      updateSelectionPanel();
       saveStoredParts(initialParts);
       renderParts(document.getElementById("s_search").value);
     }
@@ -294,6 +362,8 @@
 
         if (Array.isArray(imported) && imported.length > 0) {
           const cleaned = imported.map(p => typeof p === 'string' ? p : (p.name || p));
+          selectedParts.clear();
+          updateSelectionPanel();
           saveStoredParts(cleaned);
           renderParts(document.getElementById("s_search").value);
           alert(`Successfully imported ${cleaned.length} parts!`);
@@ -308,12 +378,12 @@
 
   // Apply Action
   document.getElementById("s_copy").onclick = () => {
-    let checkedBoxes = Array.from(box.querySelectorAll(".s_chk:checked"));
-    checkedBoxes.forEach(cb => recordUsage(cb.value));
+    const selectedArr = Array.from(selectedParts);
+    selectedArr.forEach(p => recordUsage(p));
 
     const laborPartName = "Hub Service Labor Rate (ONLY SELECT WHEN NOTHING ELSE IS REPLACED BY OEM)";
-    let physicalParts = checkedBoxes.map(cb => cb.value).filter(name => name !== laborPartName);
-    let hasLabor = checkedBoxes.some(cb => cb.value === laborPartName);
+    let physicalParts = selectedArr.filter(name => name !== laborPartName);
+    let hasLabor = selectedArr.includes(laborPartName);
 
     const testBlock = "Visual Inspection, Pump Power Up Test, Motor Test, Remote Dose Test, Keypad Test, Latch Lock Test, Disposable Test, Air Detector Test, Verify Air Detector Height, LCD Screen Inspection, Amber Green and LED Functional Test, Adjust LCD POT Screen, Downstream Occlusion Test, Upstream Occlusion Sensor Test, Battery Fallout Test, 50ml Cassette Test, Go_No_Go Test, and Delivery Accuracy Test 20mL.";
 
