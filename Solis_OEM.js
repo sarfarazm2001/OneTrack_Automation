@@ -320,17 +320,9 @@
     }
   }
 
-  // --- STRICT 100% TOKEN MATCHING ENGINE FOR SOLIS ---
-  window._otAutoSelectSolis = function(ocrText) {
-    if (!ocrText || typeof ocrText !== "string") return 0;
-
-    const checkboxes = box.querySelectorAll(".s_chk");
-    if (!checkboxes || checkboxes.length === 0) return 0;
-
-    // Clean OCR text and standardize common abbreviations
-    let cleanOCR = ocrText.toUpperCase()
-      .replace(/-\s*[\r\n]+\s*/g, ' ')
-      .replace(/[\r\n]+/g, ' ')
+  function normalizeText(txt) {
+    if (!txt) return '';
+    return txt.toUpperCase()
       .replace(/\bHSG\b/g, 'HOUSING')
       .replace(/\bAY\b/g, 'ASSEMBLY')
       .replace(/\bASSY\b/g, 'ASSEMBLY')
@@ -341,8 +333,18 @@
       .replace(/\bGND\b/g, 'GROUND')
       .replace(/\bBAT\b/g, 'BATTERY')
       .replace(/\bCONN\b/g, 'CONNECTOR');
+  }
 
-    const alphaNumOCR = cleanOCR.replace(/[^A-Z0-9\s]/g, ' ');
+  // --- STRICT DISAMBIGUATED MATCHING ENGINE FOR SOLIS ---
+  window._otAutoSelectSolis = function(ocrText) {
+    if (!ocrText || typeof ocrText !== "string") return 0;
+
+    const checkboxes = box.querySelectorAll(".s_chk");
+    if (!checkboxes || checkboxes.length === 0) return 0;
+
+    const normOCR = normalizeText(ocrText);
+    const alphaNumOCR = normOCR.replace(/[^A-Z0-9]/g, ' ');
+    const ocrWords = new Set(alphaNumOCR.split(/\s+/).filter(w => w.length > 0));
 
     let matchedCount = 0;
 
@@ -350,33 +352,21 @@
       const name = (chk.value || '').trim().toUpperCase();
       if (!name || name.includes("ONLY SELECT WHEN NOTHING") || name.includes("DO NOT USE")) return;
 
-      // Standardize abbreviations in part description
-      let normName = name
-        .replace(/\bHSG\b/g, 'HOUSING')
-        .replace(/\bAY\b/g, 'ASSEMBLY')
-        .replace(/\bASSY\b/g, 'ASSEMBLY')
-        .replace(/\bSW\b/g, 'SWITCH')
-        .replace(/\bCOMP\b/g, 'COMPARTMENT')
-        .replace(/\bLBL\b/g, 'LABEL')
-        .replace(/\bSHLD\b/g, 'SHIELD')
-        .replace(/\bGND\b/g, 'GROUND')
-        .replace(/\bBAT\b/g, 'BATTERY')
-        .replace(/\bCONN\b/g, 'CONNECTOR')
-        .replace(/[^A-Z0-9\s]/g, ' ');
+      const normName = normalizeText(name);
+      const cleanName = normName.replace(/[^A-Z0-9]/g, ' ');
 
-      // Boilerplate words to ignore
-      const stopWords = ['CADD', 'SOLIS', '1/EA', 'EA', 'PUMP', 'DEVICE', 'MODEL', '2120', 'VIP', '3RD', 'EDITION', 'CUL', 'BLUE', 'ONLY', 'COSTA', 'RICA', 'BLACK', 'DRK', 'GREY', 'RX', 'W/O', 'WITH'];
-      const tokens = normName.split(/\s+/).filter(w => w.length >= 2 && !stopWords.includes(w));
+      // Only filter out non-distinguishing filler words
+      const stopWords = new Set(['1/EA', 'EA', 'WITH', 'W/O', 'FOR', 'AND', 'THE', 'OF', 'IN', 'ON', 'TO']);
+      const tokens = cleanName.split(/\s+/).filter(w => w.length >= 1 && !stopWords.has(w));
 
       if (tokens.length === 0) return;
 
-      // Check how many tokens exist in OCR text
       let hits = 0;
       tokens.forEach(t => {
-        if (alphaNumOCR.includes(t)) hits++;
+        if (ocrWords.has(t) || alphaNumOCR.includes(t)) hits++;
       });
 
-      // STRICT CHECK: 100% of tokens must be matched
+      // Strict check: 100% of distinguishing tokens must be present
       if (hits === tokens.length) {
         if (!chk.checked) {
           chk.checked = true;
