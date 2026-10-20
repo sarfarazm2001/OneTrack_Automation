@@ -1,99 +1,100 @@
 (function runSolisCalc() {
   const initialParts = [
-    { name: "Hub Service Labor Rate (ONLY SELECT WHEN NOTHING ELSE IS REPLACED BY OEM)", pn: "LABOR" },
-    { name: "ADHESIVE, PSA, PIEZO RING, CADD-SOLIS 1/EA", pn: "30-3285" },
-    { name: "AIR DETECTOR, SOLIS", pn: "70-0446" },
-    { name: "AY, 27MM PIEZO SOUNDER, FRONT", pn: "70-0354" },
-    { name: "AY, 27MM PIEZO SOUNDER, REAR", pn: "70-0447" },
-    { name: "AY, USO, CADD-SOLIS 1/EA", pn: "67-2341" },
-    { name: "BEARING, CAMSHAFT", pn: "60013" },
-    { name: "BEARING, CAMSHAFT, .375\" OD X 0.187\" ID, CADD-SOLIS 1/EA", pn: "30-3028" },
-    { name: "BEZEL, CASSETTE DETECTION", pn: "30-3052" },
-    { name: "BEZEL, DSO, CADD-SOLIS", pn: "30-3028" },
-    { name: "BRACKET, OPTICAL SWITCH, CADD-SOLIS", pn: "30-3052" },
-    { name: "CAMSHAFT, 3 LOBE, DUAL ACTIVATION", pn: "31-0485" },
-    { name: "CONNECTOR, LEMO HALF MOON INSERT (NUT FIXING) FIXED RECEPTACLE, CADD-SOLIS", pn: "10018270-001" },
-    { name: "CONTACT, BATTERY COMPARTMENT FLOOR", pn: "70-0227" },
-    { name: "CONTACT, BATTERY, SPRING PIN, CADD-SOLIS", pn: "70-0178" },
-    { name: "DISK, OPTICAL, DUAL FLAG, CADD-SOLIS", pn: "30-3053" },
-    { name: "DISPLAY, LCD, TRULY/HIMAX, 320 X 320 W/BACKLIGHT, CADD-SOLIS", pn: "70-0508" },
-    { name: "DOOR AY, BATTERY, PUMP", pn: "30-3245" },
-    { name: "DOOR AY, BATTERY, PUMP (Do Not Use)", pn: "10022677-001" },
-    { name: "EXPULSOR, MACHINED, .344\"", pn: "30-3086-001" },
-    { name: "FLEX AY, CAM SENSOR", pn: "70-0243" },
-    { name: "FLEX AY, LED, CADD-SOLIS", pn: "70-0301" },
-    { name: "FLEX CIRCUIT, SENSOR, L/L", pn: "70-0335" },
-    { name: "FOAM, ISOLATION, LCD", pn: "30-3181" },
-    { name: "FOAM, POSITIONING, LCD", pn: "30-3173" },
-    { name: "GASKET, CONDUCTIVE, BAT COMP", pn: "30-3174" },
-    { name: "GASKET, CONDUCTIVE, CHASSIS", pn: "30-3173" },
-    { name: "GASKET, CONDUCTIVE, COPPER, RIGHT", pn: "N/A" },
-    { name: "GASKET, CONDUCTIVE, LCD, TOP", pn: "N/A" },
-    { name: "GASKET, CONDUCTIVE, LCD/FRAMING", pn: "N/A" },
-    { name: "GASKET, ENVIRONMENTAL, BATTERY COMPARTMENT", pn: "30-3289" },
-    { name: "GASKET, ENVIRONMENTAL, CHASSIS", pn: "30-3171" },
-    { name: "GASKET, ENVIRONMENTAL, POWER BOARD", pn: "30-3171" },
-    { name: "GASKET, PERIMETER, EMC", pn: "30-3167" },
-    { name: "GASKET, PSA, LENS, CADD SOLIS", pn: "30-3288" },
-    { name: "GASKET, TUBING, SILICON HOUSING", pn: "60002" },
-    { name: "GEAR, FLAT", pn: "60003" },
-    { name: "GEAR, HUB (FASTENS TO MOTOR)", pn: "60002" },
-    { name: "GEARMOTOR, PLANETARY, 12V, 16MM", pn: "10009592" },
-    { name: "GUARD, PIEZO ALARM", pn: "30-3299" },
-    { name: "HANDLE, LATCH LEVER, CADD-SOLIS", pn: "30-4106" },
-    { name: "HARNESS, WIRE, ON/OFF SWITCH", pn: "70-0216" },
-    { name: "HSG, BATTERY COMPARTMENT", pn: "30-3248" },
-    { name: "HSG, PUMP, FRONT, SHLD", pn: "30-4065" },
-    { name: "HSG, PUMP, REAR SHLD", pn: "70-0229" },
-    { name: "INSULATOR, KAPTON, CADD SOLIS", pn: "30-3106" },
-    { name: "INSULATOR, PWA/HOUSING", pn: "30-3322" },
-    { name: "INSULATOR, USB", pn: "30-4065" },
-    { name: "KEYPAD, MEMBRANE SW, W/O CONN, CADD-SOLIS", pn: "70-0229" },
-    { name: "LABEL, PUMP, REAR, CADD SOLIS VIP", pn: "10011174-001" },
-    { name: "LATCH/LOCK", pn: "67-2482" },
-    { name: "LBL, DEVICE, PUMP, CADD-SOLIS, MODEL 2120, VIP, 3RD EDITION w cUL, BLUE, RX ONLY", pn: "10017410-001" },
-    { name: "LBL, DEVICE, PUMP, CADD-SOLIS, MODEL 2120, VIP, 3RD EDITION w cUL, BLUE, RX ONLY, COSTA RICA", pn: "10017410-001" },
-    { name: "LBL, DEVICE, PUMP, CADD-SOLIS, MODEL 2120, VIP, 3RD EDITION w cUL, DRK GREY, RX ONLY", pn: "10017409-001" },
-    { name: "LBL, DEVICE, PUMP, CADD-SOLIS, VIP 1.2", pn: "10006271-002" },
-    { name: "LBL, DEVICE, PUMP, CADD-SOLIS, VIP, BLACK", pn: "10012921-001" },
-    { name: "LBL, DEVICE, PUMP, CADD-SOLIS, VIP, BLUE", pn: "10013249-001" },
-    { name: "LBL, SET, DEVICE, CADD-SOLIS", pn: "40-6288-24A" },
-    { name: "LENS, PAD PRINTED, CADD SOLIS", pn: "40-5733-51A" },
-    { name: "NLT - HEADER, IDC, 5 POS", pn: "40-6288-24A" },
-    { name: "OVERLAY, MEMBRANE SWITCH (KEYPAD), CADD-SOLIS, 21-2101-08", pn: "21-2101-08" },
-    { name: "OVERLAY, MEMBRANE SWITCH, CE ENGLISH", pn: "31-0993" },
-    { name: "PAD, GND, L/L SENSOR", pn: "70-0171" },
-    { name: "PCBA, CADD-SOLIS, FUSED", pn: "N/A" },
-    { name: "PCBA, CADD-SOLIS, TRULY/HIMAX LCD, FLASH MEMORY UPGRADE", pn: "30-4712" },
-    { name: "PIN, CASSETTE DETECTOR", pn: "10015258-001" },
-    { name: "PLATE, AY, GROUNDING", pn: "30-3163" },
-    { name: "SEAL, DIAPHRAGM, CASSETTE SENSOR", pn: "30-4086" },
-    { name: "SEAL, DSO, NEOPRENE", pn: "30-4085" },
-    { name: "SEAL, FOAM, CADD-SOLIS", pn: "30-3381" },
-    { name: "SEAL, UPSTREAM OCCLUSION", pn: "31-0993" },
-    { name: "SENSOR, DSO, CADD-SOLIS", pn: "30-4712" },
-    { name: "SOLIS, CHASSIS, MACHINED 1/EA", pn: "30-4712" },
-    { name: "STABILIZER, BATTERY, SST", pn: "30-3294" },
-    { name: "STRIP, ADHESIVE, UPPER", pn: "30-3294" },
-    { name: "SWITCH, POWER", pn: "30-3163" },
-    { name: "TAB, LCD INSTALLATION", pn: "N/A" },
-    { name: "TAPE, ADHESIVE, PIEZO GUARD", pn: "N/A" },
-    { name: "TAPE, LCD HOLD DOWN", pn: "30-3306" },
-    { name: "TAPE, POGO CONTACT", pn: "30-4085" },
-    { name: "VALVE, DUAL ACTIVATION, CADD-SOLIS", pn: "30-3063" }
+    "Hub Service Labor Rate (ONLY SELECT WHEN NOTHING ELSE IS REPLACED BY OEM)",
+    "ADHESIVE, PSA, PIEZO RING, CADD-SOLIS 1/EA",
+    "AIR DETECTOR, SOLIS",
+    "AY, 27MM PIEZO SOUNDER, FRONT",
+    "AY, 27MM PIEZO SOUNDER, REAR",
+    "AY, USO, CADD-SOLIS 1/EA",
+    "BEARING, CAMSHAFT",
+    "BEARING, CAMSHAFT, .375\" OD X 0.187\" ID, CADD-SOLIS 1/EA",
+    "BEZEL, CASSETTE DETECTION",
+    "BEZEL, DSO, CADD-SOLIS",
+    "BRACKET, OPTICAL SWITCH, CADD-SOLIS",
+    "CAMSHAFT, 3 LOBE, DUAL ACTIVATION",
+    "CONNECTOR, LEMO HALF MOON INSERT (NUT FIXING) FIXED RECEPTACLE, CADD-SOLIS",
+    "CONTACT, BATTERY COMPARTMENT FLOOR",
+    "CONTACT, BATTERY, SPRING PIN, CADD-SOLIS",
+    "DISK, OPTICAL, DUAL FLAG, CADD-SOLIS",
+    "DISPLAY, LCD, TRULY/HIMAX, 320 X 320 W/BACKLIGHT, CADD-SOLIS",
+    "DOOR AY, BATTERY, PUMP",
+    "DOOR AY, BATTERY, PUMP (Do Not Use)",
+    "EXPULSOR, MACHINED, .344\"",
+    "FLEX AY, CAM SENSOR",
+    "FLEX AY, LED, CADD-SOLIS",
+    "FLEX CIRCUIT, SENSOR, L/L",
+    "FOAM, ISOLATION, LCD",
+    "FOAM, POSITIONING, LCD",
+    "GASKET, CONDUCTIVE, BAT COMP",
+    "GASKET, CONDUCTIVE, CHASSIS",
+    "GASKET, CONDUCTIVE, COPPER, RIGHT",
+    "GASKET, CONDUCTIVE, LCD, TOP",
+    "GASKET, CONDUCTIVE, LCD/FRAMING",
+    "GASKET, ENVIRONMENTAL, BATTERY COMPARTMENT",
+    "GASKET, ENVIRONMENTAL, CHASSIS",
+    "GASKET, ENVIRONMENTAL, POWER BOARD",
+    "GASKET, PERIMETER, EMC",
+    "GASKET, PSA, LENS, CADD SOLIS",
+    "GASKET, TUBING, SILICON HOUSING",
+    "GEAR, FLAT",
+    "GEAR, HUB (FASTENS TO MOTOR)",
+    "GEARMOTOR, PLANETARY, 12V, 16MM",
+    "GUARD, PIEZO ALARM",
+    "HANDLE, LATCH LEVER, CADD-SOLIS",
+    "HARNESS, WIRE, ON/OFF SWITCH",
+    "HSG, BATTERY COMPARTMENT",
+    "HSG, PUMP, FRONT, SHLD",
+    "HSG, PUMP, REAR SHLD",
+    "INSULATOR, KAPTON, CADD SOLIS",
+    "INSULATOR, PWA/HOUSING",
+    "INSULATOR, USB",
+    "KEYPAD, MEMBRANE SW, W/O CONN, CADD-SOLIS",
+    "LABEL, PUMP, REAR, CADD SOLIS VIP",
+    "LATCH/LOCK",
+    "LBL, DEVICE, PUMP, CADD-SOLIS, MODEL 2120, VIP, 3RD EDITION w cUL, BLUE, RX ONLY",
+    "LBL, DEVICE, PUMP, CADD-SOLIS, MODEL 2120, VIP, 3RD EDITION w cUL, BLUE, RX ONLY, COSTA RICA",
+    "LBL, DEVICE, PUMP, CADD-SOLIS, MODEL 2120, VIP, 3RD EDITION w cUL, DRK GREY, RX ONLY",
+    "LBL, DEVICE, PUMP, CADD-SOLIS, VIP 1.2",
+    "LBL, DEVICE, PUMP, CADD-SOLIS, VIP, BLACK",
+    "LBL, DEVICE, PUMP, CADD-SOLIS, VIP, BLUE",
+    "LBL, SET, DEVICE, CADD-SOLIS",
+    "LENS, PAD PRINTED, CADD SOLIS",
+    "NLT - HEADER, IDC, 5 POS",
+    "OVERLAY, MEMBRANE SWITCH (KEYPAD), CADD-SOLIS, 21-2101-08",
+    "OVERLAY, MEMBRANE SWITCH, CE ENGLISH",
+    "PAD, GND, L/L SENSOR",
+    "PCBA, CADD-SOLIS, FUSED",
+    "PCBA, CADD-SOLIS, TRULY/HIMAX LCD, FLASH MEMORY UPGRADE",
+    "PIN, CASSETTE DETECTOR",
+    "PLATE, AY, GROUNDING",
+    "SEAL, DIAPHRAGM, CASSETTE SENSOR",
+    "SEAL, DSO, NEOPRENE",
+    "SEAL, FOAM, CADD-SOLIS",
+    "SEAL, UPSTREAM OCCLUSION",
+    "SENSOR, DSO, CADD-SOLIS",
+    "SOLIS, CHASSIS, MACHINED 1/EA",
+    "STABILIZER, BATTERY, SST",
+    "STRIP, ADHESIVE, UPPER",
+    "SWITCH, POWER",
+    "TAB, LCD INSTALLATION",
+    "TAPE, ADHESIVE, PIEZO GUARD",
+    "TAPE, LCD HOLD DOWN",
+    "TAPE, POGO CONTACT",
+    "VALVE, DUAL ACTIVATION, CADD-SOLIS"
   ];
 
   function getStoredParts() {
     try {
       const stored = localStorage.getItem("solis_parts_list_v1");
-      if (stored) return JSON.parse(stored);
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          return parsed.map(p => typeof p === 'string' ? p : (p.name || p));
+        }
+      }
     } catch (e) {}
     localStorage.setItem("solis_parts_list_v1", JSON.stringify(initialParts));
     return initialParts;
-  }
-
-  function saveStoredParts(list) {
-    localStorage.setItem("solis_parts_list_v1", JSON.stringify(list));
   }
 
   function getFreq() {
@@ -178,7 +179,6 @@
     }
   };
 
-  // --- TAP-TO-REFOCUS ON VIDEO CLICK ---
   videoElement.onclick = async () => {
     if (!mediaStream) return;
     const track = mediaStream.getVideoTracks()[0];
@@ -197,7 +197,6 @@
     }
   };
 
-  // --- 2K STREAM CONSTRAINTS & HARDWARE AUTOFOCUS ---
   startCamBtn.onclick = async () => {
     try {
       showToast("Initializing 2K camera stream...");
@@ -261,7 +260,6 @@
     reader.readAsDataURL(file);
   }
 
-  // --- HIGH-RES CANVAS CAPTURE ---
   captureBtn.onclick = () => {
     let canvas = document.createElement("canvas");
     canvas.width = videoElement.videoWidth || 2560;
@@ -276,16 +274,13 @@
     runPreprocessedTesseract(canvas);
   };
 
-  // --- CANVAS IMAGE PREPROCESSOR (GRAYSCALE & BINARIZATION) ---
   function preprocessCanvasForOCR(canvas) {
     let ctx = canvas.getContext("2d");
     let imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
     let d = imgData.data;
 
-    // 1. Grayscale & High-Contrast Stretch
     for (let i = 0; i < d.length; i += 4) {
       let v = 0.2126 * d[i] + 0.7152 * d[i + 1] + 0.0722 * d[i + 2];
-      // High contrast boost
       v = (v - 128) * 1.5 + 128;
       v = v < 0 ? 0 : (v > 255 ? 255 : v);
       d[i] = d[i + 1] = d[i + 2] = v;
@@ -295,10 +290,8 @@
     return canvas.toDataURL("image/png");
   }
 
-  // --- LOCAL TESSERACT OCR RUNNER ---
   async function runPreprocessedTesseract(canvas) {
     showToast("⚡ Preprocessing 2K image & running Tesseract...");
-
     const preprocessedDataUri = preprocessCanvasForOCR(canvas);
 
     try {
@@ -316,7 +309,6 @@
       let rawText = result.data.text ? result.data.text.trim() : "";
 
       if (rawText) {
-        console.log("--- PREPROCESSED 2K TESSERACT SCAN --- \n", rawText);
         let count = window._otAutoSelectSolis(rawText);
         showToast(`✓ Processed 2K Scan! Auto-selected ${count} part(s).`);
       } else {
@@ -328,26 +320,28 @@
     }
   }
 
-  // --- DESCRIPTION-ONLY SELECTION ENGINE ---
+  // --- DESCRIPTION-ONLY OCR MATCHING ENGINE ---
   window._otAutoSelectSolis = function(ocrText) {
     if (!ocrText || typeof ocrText !== "string") return 0;
 
     const checkboxes = box.querySelectorAll(".s_chk");
     if (!checkboxes || checkboxes.length === 0) return 0;
 
-    let cleaned = ocrText.toUpperCase().replace(/-\s*[\r\n]+\s*/g, '');
+    let cleanOCR = ocrText.toUpperCase()
+      .replace(/-\s*[\r\n]+\s*/g, ' ')
+      .replace(/[\r\n]+/g, ' ');
 
-    cleaned = cleaned
-      .replace(/\b(QTY|QUANTITY|PARTS?|REPLACED|DESCRIPTION|PART\s*NO|NO|RARE)\b/g, ' ')
-      .replace(/\b\d+\b/g, ' ');
+    cleanOCR = cleanOCR
+      .replace(/\bHOUSING\b/g, 'HSG')
+      .replace(/\bASSEMBLY\b/g, 'AY')
+      .replace(/\bASSY\b/g, 'AY')
+      .replace(/\bSWITCH\b/g, 'SW')
+      .replace(/\bCOMPARTMENT\b/g, 'COMP')
+      .replace(/\bLABEL\b/g, 'LBL')
+      .replace(/\bSHIELD\b/g, 'SHLD')
+      .replace(/\bGROUND\b/g, 'GND');
 
-    const normText = cleaned
-      .replace(/[\r\n]+/g, ' ')
-      .replace(/[\/\\.,_\-()]+/g, ' ')
-      .replace(/\s+/g, ' ')
-      .trim();
-
-    const compressedText = cleaned.replace(/[^A-Z0-9]/g, '');
+    const alphaNumOCR = cleanOCR.replace(/[^A-Z0-9\s]/g, ' ');
 
     let matchedCount = 0;
 
@@ -355,72 +349,32 @@
       const name = (chk.value || '').trim().toUpperCase();
       if (!name || name.includes("ONLY SELECT WHEN NOTHING") || name.includes("DO NOT USE")) return;
 
+      let normName = name
+        .replace(/\bHOUSING\b/g, 'HSG')
+        .replace(/\bASSEMBLY\b/g, 'AY')
+        .replace(/\bASSY\b/g, 'AY')
+        .replace(/\bSWITCH\b/g, 'SW')
+        .replace(/\bCOMPARTMENT\b/g, 'COMP')
+        .replace(/\bLABEL\b/g, 'LBL')
+        .replace(/\bSHIELD\b/g, 'SHLD')
+        .replace(/\bGROUND\b/g, 'GND')
+        .replace(/[^A-Z0-9\s]/g, ' ');
+
+      const stopWords = ['CADD', 'SOLIS', '1/EA', 'EA', 'AY', 'PUMP', 'DEVICE', 'MODEL', '2120', 'VIP', '3RD', 'EDITION', 'CUL', 'BLUE', 'ONLY', 'COSTA', 'RICA', 'BLACK', 'DRK', 'GREY', 'RX', 'W/O', 'CONN', 'WITH'];
+      const tokens = normName.split(/\s+/).filter(w => w.length >= 2 && !stopWords.includes(w));
+
+      if (tokens.length === 0) return;
+
+      let hits = 0;
+      tokens.forEach(t => {
+        if (alphaNumOCR.includes(t)) hits++;
+      });
+
       let isMatch = false;
-
-      const has = (...terms) => terms.every(t => normText.includes(t.toUpperCase()));
-      const cHas = (...terms) => terms.every(t => compressedText.includes(t.toUpperCase().replace(/[^A-Z0-9]/g, '')));
-
-      // --- STRICT ANCHOR RULES ---
-      if (name.includes("HSG, BATTERY COMPARTMENT")) {
-        if ((has("BATTERY") || has("COMPARTMENT")) && (has("HSG") || has("HOUSING")) &&
-            !has("CONTACT") && !has("GASKET") && !has("DOOR") && !has("STABILIZER") && !has("FLOOR")) {
-          isMatch = true;
-        }
-      }
-      else if (name.includes("CONTACT, BATTERY COMPARTMENT FLOOR")) {
-        if (has("CONTACT") && has("FLOOR")) {
-          isMatch = true;
-        }
-      }
-      else if (name.includes("CONTACT, BATTERY, SPRING PIN")) {
-        if (has("CONTACT") && (has("SPRING") || has("PIN"))) {
-          isMatch = true;
-        }
-      }
-      else if (name.includes("DOOR AY, BATTERY, PUMP")) {
-        if (has("DOOR") && (has("BATTERY") || has("PUMP"))) {
-          isMatch = true;
-        }
-      }
-      else if (name.includes("SEAL, DSO, NEOPRENE")) {
-        if (has("NEOPRENE") || (has("SEAL") && (has("DSO") || has("DS0")))) {
-          isMatch = true;
-        }
-      }
-      else if (name.includes("21-2101-08")) {
-        if (cHas("212101")) {
-          isMatch = true;
-        }
-      }
-      else if (name.includes("CE ENGLISH")) {
-        if (has("OVERLAY") && (has("ENGLISH") || has("CE")) && !has("KEYPAD") && !cHas("212101")) {
-          isMatch = true;
-        }
-      }
-      else if (name.includes("STABILIZER, BATTERY, SST")) {
-        if (has("STABILIZER")) {
-          isMatch = true;
-        }
-      }
-      else if (name.includes("LENS, PAD PRINTED")) {
-        if (has("LENS") || (has("PAD") && has("PRINTED"))) {
-          isMatch = true;
-        }
-      }
-      else if (name.includes("VIP 1.2")) {
-        if (has("VIP") && (has("1.2") || cHas("VIP12") || cHas("VIP1 2"))) {
-          isMatch = true;
-        }
-      }
-      else if (name.includes("KEYPAD, MEMBRANE SW")) {
-        if (has("KEYPAD") && !has("OVERLAY") && !cHas("212101")) {
-          isMatch = true;
-        }
-      }
-      else if (name.includes("LBL, SET, DEVICE")) {
-        if (has("SET") && (has("LBL") || has("LABEL") || has("DEVICE")) && !has("VIP")) {
-          isMatch = true;
-        }
+      if (tokens.length === 1 && hits === 1) {
+        isMatch = true;
+      } else if (tokens.length > 1 && (hits / tokens.length) >= 0.5) {
+        isMatch = true;
       }
 
       if (isMatch) {
@@ -440,18 +394,17 @@
     listContainer.innerHTML = "";
     
     let freq = getFreq();
-    partsData.sort((a, b) => (freq[b.name] || 0) - (freq[a.name] || 0));
+    partsData.sort((a, b) => (freq[b] || 0) - (freq[a] || 0));
 
-    partsData.forEach((p) => {
+    partsData.forEach((partName) => {
       let row = document.createElement("div");
       row.className = "part_row";
       row.style.cssText = "display:flex;align-items:center;justify-content:space-between;padding:5px 0;font-size:12px;border-bottom:1px solid #21262d;";
       row.innerHTML = `
-        <label style="display:flex;align-items:center;cursor:pointer;flex:1;margin-right:10px;color:#c9d1d9;">
-          <input type="checkbox" class="s_chk" data-pn="${p.pn}" value="${p.name}" style="margin-right:8px;transform:scale(1.1);flex-shrink:0;">
-          <span class="desc_txt">${p.name}</span>
+        <label style="display:flex;align-items:center;cursor:pointer;flex:1;color:#c9d1d9;">
+          <input type="checkbox" class="s_chk" value="${partName}" style="margin-right:8px;transform:scale(1.1);flex-shrink:0;">
+          <span class="desc_txt">${partName}</span>
         </label>
-        <span class="pn_txt" style="color:#8b949e;font-family:monospace;white-space:nowrap;">${p.pn}</span>
       `;
       listContainer.appendChild(row);
     });
@@ -469,8 +422,9 @@
     let checkedBoxes = Array.from(box.querySelectorAll(".s_chk:checked"));
     checkedBoxes.forEach(cb => recordUsage(cb.value));
 
-    let physicalParts = checkedBoxes.filter(cb => cb.dataset.pn !== "LABOR").map(cb => cb.value);
-    let hasLabor = checkedBoxes.some(cb => cb.dataset.pn === "LABOR");
+    const laborPartName = "Hub Service Labor Rate (ONLY SELECT WHEN NOTHING ELSE IS REPLACED BY OEM)";
+    let physicalParts = checkedBoxes.map(cb => cb.value).filter(name => name !== laborPartName);
+    let hasLabor = checkedBoxes.some(cb => cb.value === laborPartName);
 
     let text = "";
     const testBlock = "Visual Inspection, Pump Power Up Test, Motor Test, Remote Dose Test, Keypad Test, Latch Lock Test, Disposable Test, Air Detector Test, Verify Air Detector Height, LCD Screen Inspection, Amber Green and LED Functional Test, Adjust LCD POT Screen, Downstream Occlusion Test, Upstream Occlusion Sensor Test, Battery Fallout Test, 50ml Cassette Test, Go_No_Go Test, and Delivery Accuracy Test 20mL.";
