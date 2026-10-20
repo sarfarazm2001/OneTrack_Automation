@@ -4,14 +4,9 @@
   "Failed Up Occlusion",
   "Failed Low Down Occlusion",
   "Failed High Down Occlusion",
-  "Needs baseline calibration.(CURLIN)",
   "Bubbled keypad",
   "Torn up keypad",
-  "Cracked back panel hinges",
-  "Broken back panel hinges",
-  "Cracked door clasp",
-  "Broken door clasp",
-  "Broken door hinges",
+  "Needs baseline calibration.",
   "Cracks on the top of the cassette bay",
   "Cracked cassette bay.",
   "Protruded threaded insert",
@@ -27,7 +22,10 @@
   "Error Code:",
   "SYSTEM TIMEOUT!",
   "MOTOR STALLED!",
-  "Standby Light failure"
+  "Standby Light failure",
+  "Cracked Back Case.",
+  "Needs baseline calibration.",
+  "Cracked Front Case."
 ];
 
   // Map phrases that require unit values and custom placeholding
