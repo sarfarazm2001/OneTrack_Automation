@@ -5,6 +5,7 @@
     "Failed Low Down Occlusion",
     "Failed High Down Occlusion",
     "Bubbled keypad",
+    "Needs pressure strains calibration.",
     "Torn up keypad",
     "Cracked door clasp.",
     "Broken door clasp.",
