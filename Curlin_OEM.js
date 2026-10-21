@@ -1,35 +1,39 @@
 (function runCurlinCalc() {
   const initialParts = [
-    { name: "Hub Service Labor Rate (ONLY SELECT WHEN NOTHING ELSE IS REPLACED BY OEM)", pn: "LABOR" },
-    { name: "DOOR ASSY, CURLIN 6000", pn: "350-2000" },
-    { name: "LATCH ASSY, DOOR, CURLIN", pn: "350-2005" },
-    { name: "BATTERY DOOR / COVER, CURLIN", pn: "350-2010" },
-    { name: "KEYPAD / MEMBRANE SWITCH, CURLIN 6000", pn: "350-2015" },
-    { name: "HOUSING, FRONT, CURLIN", pn: "350-2020" },
-    { name: "HOUSING, REAR, CURLIN", pn: "350-2025" },
-    { name: "PUMPING MECHANISM / FINGER ASSY", pn: "350-2030" },
-    { name: "AIR IN LINE SENSOR, CURLIN", pn: "350-2035" },
-    { name: "PRESSURE SENSOR, UPSTREAM / DOWNSTREAM", pn: "350-2040" },
-    { name: "MAIN PCBA / CIRCUIT BOARD, CURLIN", pn: "350-2045" },
-    { name: "POLE CLAMP ASSY, CURLIN", pn: "350-2050" },
-    { name: "DISPLAY LCD SCREEN, CURLIN", pn: "350-2055" },
-    { name: "GASKET / SEAL KIT, CURLIN", pn: "350-2060" }
+    { name: "IV Labor", pn: "LABOR" },
+    { name: "IV PM", pn: "LABOR" },
+    { name: "Mech seal", pn: "340-0049" },
+    { name: "Pump Mechanism Assembly", pn: "340-0055" },
+    { name: "Sub-Assembly w/o Motor", pn: "340-0057" },
+    { name: "Bezel with Overmold", pn: "340-0070" },
+    { name: "Rear Case Assy.", pn: "340-1003" },
+    { name: "Keypad w/o overlay", pn: "350-2011" },
+    { name: "LCD lens", pn: "360-0016" },
+    { name: "Battery Ejector", pn: "360-0022" },
+    { name: "Battery Door", pn: "360-1004/360-0091" },
+    { name: "PCB Assembly", pn: "360-2004-00" },
+    { name: "Keypad overlay", pn: "360-2009" },
+    { name: "Motor & Worm Gear Assy.", pn: "59933" },
+    { name: "Front Case Sub Assembly", pn: "66419" },
+    { name: "BT2", pn: "C12-02001" },
+    { name: "BT3", pn: "C12-04002" },
+    { name: "LCD Module", pn: "C14-05003/58553" }
   ];
 
   function getStoredParts() {
     try {
-      const stored = localStorage.getItem("curlin_parts_list_v1");
+      const stored = localStorage.getItem("curlin_parts_list_v2");
       if (stored) {
         const parsed = JSON.parse(stored);
         if (Array.isArray(parsed) && parsed.length > 0) return parsed;
       }
     } catch (e) {}
-    localStorage.setItem("curlin_parts_list_v1", JSON.stringify(initialParts));
+    localStorage.setItem("curlin_parts_list_v2", JSON.stringify(initialParts));
     return initialParts;
   }
 
   function saveStoredParts(list) {
-    localStorage.setItem("curlin_parts_list_v1", JSON.stringify(list));
+    localStorage.setItem("curlin_parts_list_v2", JSON.stringify(list));
   }
 
   function getFreq() {
