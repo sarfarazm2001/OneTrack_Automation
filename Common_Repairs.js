@@ -11,7 +11,7 @@
   "Faded SN label.",
   "Missing SN label.",
   "Cracked back panel hinges.",
-  "Broken back panel hinges."
+  "Broken back panel hinges.",
   "Needs baseline calibration.",
   "Cracks on the top of the cassette bay",
   "Cracked cassette bay.",
