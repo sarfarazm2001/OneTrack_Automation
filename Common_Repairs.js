@@ -1,69 +1,69 @@
 (function runCommonRepairs() {
   const initialDefaults = [
-  "Failed Volume Test",
-  "Failed Up Occlusion",
-  "Failed Low Down Occlusion",
-  "Failed High Down Occlusion",
-  "Bubbled keypad",
-  "Torn up keypad",
-  "Cracked door clasp.",
-  "Broken door clasp.",
-  "Faded SN label.",
-  "Missing SN label.",
-  "Cracked back panel hinges.",
-  "Broken back panel hinges.",
-  "Needs baseline calibration.",
-  "Cracks on the top of the cassette bay",
-  "Cracked cassette bay.",
-  "Protruded threaded insert",
-  "Slightly protruded threaded insert",
-  "Will not power on unless connected to a charger",
-  "Will not power on even when connected to a charger",
-  "Cracked Back Case.",
-  "Cracked Front Case.",
-  "Broken LCD",
-  "Strong smoke smell",
-  "Marker stain on the door",
-  "Some kind of ink stain on rubber case",
-  "BT2 reading:",
-  "BT3 reading:",
-  "Error Code:",
-  "SYSTEM TIMEOUT!",
-  "MOTOR STALLED!",
-  "Standby Light failure",
-];
+    "Failed Volume Test",
+    "Failed Up Occlusion",
+    "Failed Low Down Occlusion",
+    "Failed High Down Occlusion",
+    "Bubbled keypad",
+    "Torn up keypad",
+    "Cracked door clasp.",
+    "Broken door clasp.",
+    "Faded SN label.",
+    "Missing SN label.",
+    "Cracked back panel hinges.",
+    "Broken back panel hinges.",
+    "Needs baseline calibration.",
+    "Cracks on the top of the cassette bay",
+    "Cracked cassette bay.",
+    "Protruded threaded insert",
+    "Slightly protruded threaded insert",
+    "Will not power on unless connected to a charger",
+    "Will not power on even when connected to a charger",
+    "Cracked Back Case.",
+    "Cracked Front Case.",
+    "Broken LCD",
+    "Strong smoke smell",
+    "Marker stain on the door",
+    "Some kind of ink stain on rubber case",
+    "BT2 reading:",
+    "BT3 reading:",
+    "Error Code:",
+    "SYSTEM TIMEOUT!",
+    "MOTOR STALLED!",
+    "Standby Light failure"
+  ];
 
   // Map phrases that require unit values and custom placeholding
   const initialNumericConfig = {
-  "Failed Volume Test": {
-    "unit": "mL",
-    "placeholder": "e.g. 9.632"
-  },
-  "Failed Low Down Occlusion": {
-    "unit": "psi",
-    "placeholder": "e.g. 10.5"
-  },
-  "Failed High Down Occlusion": {
-    "unit": "psi",
-    "placeholder": "e.g. 18.2"
-  },
-  "Failed Up Occlusion": {
-    "unit": "psi",
-    "placeholder": "e.g. -8.53"
-  },
-  "BT2 reading:": {
-    "unit": "vdc",
-    "placeholder": "e.g. 0.480"
-  },
-  "BT3 reading:": {
-    "unit": "vdc",
-    "placeholder": "e.g. 0.480"
-  },
-  "Error Code:": {
-    "unit": "",
-    "placeholder": "e.g. 102"
-  }
-};
+    "Failed Volume Test": {
+      "unit": "mL",
+      "placeholder": "e.g. 9.632"
+    },
+    "Failed Low Down Occlusion": {
+      "unit": "psi",
+      "placeholder": "e.g. 10.5"
+    },
+    "Failed High Down Occlusion": {
+      "unit": "psi",
+      "placeholder": "e.g. 18.2"
+    },
+    "Failed Up Occlusion": {
+      "unit": "psi",
+      "placeholder": "e.g. -8.53"
+    },
+    "BT2 reading:": {
+      "unit": "vdc",
+      "placeholder": "e.g. 0.480"
+    },
+    "BT3 reading:": {
+      "unit": "vdc",
+      "placeholder": "e.g. 0.480"
+    },
+    "Error Code:": {
+      "unit": "",
+      "placeholder": "e.g. 102"
+    }
+  };
 
   // Storage Handlers for Presets
   function getStoredPresets() {
