@@ -65,22 +65,24 @@
     { name: "WASHER SEAL,JOEY", pn: "F31983" }
   ];
 
+  const selectedParts = new Set();
+
   function getStoredData() {
     try {
-      const storedH = localStorage.getItem("joey_inhouse_highlights_v1");
-      const storedS = localStorage.getItem("joey_inhouse_standards_v1");
+      const storedH = localStorage.getItem("joey_inhouse_highlights_v2");
+      const storedS = localStorage.getItem("joey_inhouse_standards_v2");
       if (storedH && storedS) {
         return { highlightParts: JSON.parse(storedH), standardParts: JSON.parse(storedS) };
       }
     } catch (e) {}
-    localStorage.setItem("joey_inhouse_highlights_v1", JSON.stringify(initialHighlightParts));
-    localStorage.setItem("joey_inhouse_standards_v1", JSON.stringify(initialStandardParts));
+    localStorage.setItem("joey_inhouse_highlights_v2", JSON.stringify(initialHighlightParts));
+    localStorage.setItem("joey_inhouse_standards_v2", JSON.stringify(initialStandardParts));
     return { highlightParts: initialHighlightParts, standardParts: initialStandardParts };
   }
 
   function saveData(hData, sData) {
-    localStorage.setItem("joey_inhouse_highlights_v1", JSON.stringify(hData));
-    localStorage.setItem("joey_inhouse_standards_v1", JSON.stringify(sData));
+    localStorage.setItem("joey_inhouse_highlights_v2", JSON.stringify(hData));
+    localStorage.setItem("joey_inhouse_standards_v2", JSON.stringify(sData));
   }
 
   function getFreq() {
@@ -113,7 +115,7 @@
       target.dispatchEvent(new Event("change", { bubbles: true }));
       target.dispatchEvent(new Event("blur", { bubbles: true }));
     } else {
-      alert("Textarea not found. Findings copied to clipboard!");
+      alert("Findings copied to clipboard!");
     }
   }
 
@@ -125,27 +127,47 @@
   overlay.style.cssText = "position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.7);z-index:9999999;display:flex;align-items:center;justify-content:center;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;";
 
   const box = document.createElement("div");
-  box.style.cssText = "background:#1e2329;padding:20px;border-radius:10px;box-shadow:0 8px 32px rgba(0,0,0,0.5);width:450px;max-height:85vh;display:flex;flex-direction:column;color:#f1f3f5;border:1px solid #2d333b;";
+  box.style.cssText = "background:#1e2329;padding:20px;border-radius:10px;box-shadow:0 8px 32px rgba(0,0,0,0.5);width:520px;max-height:85vh;display:flex;flex-direction:column;color:#f1f3f5;border:1px solid #2d333b;";
 
   box.innerHTML = `
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
-      <h3 style="margin:0;font-size:16px;font-weight:700;color:#fff;">Joey IN HOUSE Findings Generator</h3>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+      <div style="display:flex;align-items:center;gap:10px;">
+        <h3 style="margin:0;font-size:16px;font-weight:700;color:#fff;">Joey IN HOUSE Findings Generator</h3>
+        <span id="j_badge_count" style="display:none;background:#1f6feb;color:#fff;font-size:11px;padding:2px 8px;border-radius:12px;font-weight:600;">0 selected</span>
+      </div>
       <span id="j_close_x" style="cursor:pointer;font-size:20px;color:#8b949e;line-height:1;">&times;</span>
     </div>
+
+    <!-- Pinned Always-Visible Selected Items Panel -->
+    <div id="j_selected_panel" style="display:none;background:#161b22;border:1px solid #30363d;border-radius:6px;padding:8px;margin-bottom:10px;max-height:100px;overflow-y:auto;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+        <span style="font-size:11px;font-weight:700;color:#8b949e;text-transform:uppercase;letter-spacing:0.5px;">Selected Parts (<span id="j_selected_num">0</span>):</span>
+        <button id="j_clear_selected" style="background:none;border:none;color:#f85149;font-size:11px;cursor:pointer;padding:0;font-weight:600;">Clear All</button>
+      </div>
+      <div id="j_chips_container" style="display:flex;flex-wrap:wrap;gap:6px;"></div>
+    </div>
+
+    <!-- Search & Add Controls -->
     <div style="display:flex;gap:6px;margin-bottom:10px;">
-      <input type="text" id="j_search" placeholder="🔍 Search parts..." style="flex:1;padding:8px;background:#1e2329;color:#fff;border:1px solid #363d4a;border-radius:4px;font-size:12px;box-sizing:border-box;">
+      <input type="text" id="j_search" placeholder="🔍 Search parts or P/N..." style="flex:1;padding:8px;background:#161b22;color:#fff;border:1px solid #363d4a;border-radius:4px;font-size:12px;box-sizing:border-box;">
       <button id="j_add_btn" style="padding:8px 12px;background:#238636;color:#fff;border:none;border-radius:4px;cursor:pointer;font-weight:600;font-size:12px;white-space:nowrap;">➕ Add Part</button>
     </div>
-    <div id="j_parts_list" style="overflow-y:auto;flex:1;display:flex;flex-direction:column;gap:6px;padding-right:4px;"></div>
+
+    <!-- Parts List Container -->
+    <div id="j_parts_list" style="overflow-y:auto;max-height:240px;display:flex;flex-direction:column;gap:6px;padding-right:4px;background:#0d1117;border:1px solid #30363d;border-radius:6px;padding:8px;"></div>
+
+    <!-- Import / Export Controls -->
     <div style="display:flex;gap:6px;margin-top:10px;padding-top:10px;border-top:1px solid #2d333b;">
       <button id="j_export_btn" style="flex:1;padding:7px;background:#316dca;color:#fff;border:none;border-radius:4px;cursor:pointer;font-weight:600;font-size:11px;">📤 Export Source (.js)</button>
       <button id="j_import_btn" style="flex:1;padding:7px;background:#6e40c9;color:#fff;border:none;border-radius:4px;cursor:pointer;font-weight:600;font-size:11px;">📥 Import Parts File</button>
       <input type="file" id="j_import_file_input" accept=".js,.json" style="display:none;">
     </div>
+
+    <!-- Action Buttons -->
     <div style="display:flex;gap:8px;margin-top:12px;">
       <button id="j_reset_btn" title="Reset to defaults" style="padding:8px 12px;background:#484f58;color:#fff;border:none;border-radius:4px;cursor:pointer;font-weight:600;font-size:12px;">↺ Reset</button>
       <button id="j_back" style="flex:1;padding:8px;background:#363d4a;color:#fff;border:none;border-radius:4px;cursor:pointer;font-weight:600;font-size:12px;">← Back</button>
-      <button id="j_copy" style="flex:1.2;padding:8px;background:#238636;color:#fff;border:none;border-radius:4px;cursor:pointer;font-weight:600;font-size:12px;">Apply</button>
+      <button id="j_copy" style="flex:1.2;padding:8px;background:#238636;color:#fff;border:none;border-radius:4px;cursor:pointer;font-weight:600;font-size:12px;">Apply Findings</button>
       <button id="j_cancel" style="flex:1;padding:8px;background:#da3633;color:#fff;border:none;border-radius:4px;cursor:pointer;font-weight:600;font-size:12px;">Cancel</button>
     </div>
   `;
@@ -154,6 +176,45 @@
   document.body.appendChild(overlay);
 
   const listContainer = document.getElementById("j_parts_list");
+  const chipsContainer = document.getElementById("j_chips_container");
+  const selectedPanel = document.getElementById("j_selected_panel");
+  const badgeCount = document.getElementById("j_badge_count");
+  const selectedNum = document.getElementById("j_selected_num");
+
+  function updateSelectionPanel() {
+    const count = selectedParts.size;
+    if (count > 0) {
+      badgeCount.textContent = `${count} selected`;
+      badgeCount.style.display = "inline-block";
+      selectedNum.textContent = count;
+      selectedPanel.style.display = "block";
+    } else {
+      badgeCount.style.display = "none";
+      selectedPanel.style.display = "none";
+    }
+
+    chipsContainer.innerHTML = "";
+    selectedParts.forEach((partName) => {
+      const chip = document.createElement("span");
+      chip.style.cssText = "background:#1f6feb;color:#fff;font-size:11px;padding:3px 8px;border-radius:12px;display:inline-flex;align-items:center;gap:6px;font-weight:500;";
+      chip.innerHTML = `<span>${partName}</span><span style="cursor:pointer;font-weight:bold;opacity:0.8;">&times;</span>`;
+
+      chip.querySelector("span:last-child").onclick = () => {
+        selectedParts.delete(partName);
+        updateSelectionPanel();
+        const cb = listContainer.querySelector(`input[value="${CSS.escape(partName)}"]`);
+        if (cb) cb.checked = false;
+      };
+
+      chipsContainer.appendChild(chip);
+    });
+  }
+
+  document.getElementById("j_clear_selected").onclick = () => {
+    selectedParts.clear();
+    updateSelectionPanel();
+    listContainer.querySelectorAll(".j_chk").forEach(cb => cb.checked = false);
+  };
 
   function renderParts(filter = "") {
     listContainer.innerHTML = "";
@@ -172,34 +233,99 @@
     const unhighlighted = standardParts.filter((p) => !seen.has(p.name)).sort(sortByFreq);
 
     const createRow = (p, isHighlight) => {
-      if (filter && !p.name.toLowerCase().includes(filter.toLowerCase()) && !p.pn.toLowerCase().includes(filter.toLowerCase())) return null;
+      const q = filter.toLowerCase();
+      if (filter && !p.name.toLowerCase().includes(q) && !p.pn.toLowerCase().includes(q)) return null;
 
       const row = document.createElement("div");
       row.style.cssText = isHighlight
-        ? "display:flex;align-items:center;justify-content:space-between;background:#382d12;border:1px solid #845306;border-radius:5px;padding:6px 8px;font-weight:bold;"
-        : "display:flex;align-items:center;justify-content:space-between;background:#232830;border:1px solid #30363d;border-radius:5px;padding:6px 8px;";
+        ? "display:flex;align-items:center;justify-content:space-between;background:#382d12;border:1px solid #845306;border-radius:5px;padding:6px 8px;"
+        : "display:flex;align-items:center;justify-content:space-between;background:#161b22;border:1px solid #30363d;border-radius:5px;padding:6px 8px;";
 
-      const leftGroup = document.createElement("span");
-      leftGroup.style.cssText = "display:flex;align-items:center;gap:8px;font-size:12px;color:#e6edf3;";
+      const labelGroup = document.createElement("label");
+      labelGroup.style.cssText = "display:flex;align-items:center;gap:8px;font-size:12px;color:#e6edf3;cursor:pointer;flex:1;";
 
       const checkbox = document.createElement("input");
       checkbox.type = "checkbox";
       checkbox.className = "j_chk";
       checkbox.value = p.name;
+      checkbox.checked = selectedParts.has(p.name);
       checkbox.style.cssText = "transform:scale(1.1);cursor:pointer;";
+
+      checkbox.onchange = (e) => {
+        if (e.target.checked) selectedParts.add(p.name);
+        else selectedParts.delete(p.name);
+        updateSelectionPanel();
+      };
 
       const labelText = document.createElement("span");
       labelText.textContent = p.name;
+      if (isHighlight) labelText.style.fontWeight = "bold";
 
-      leftGroup.appendChild(checkbox);
-      leftGroup.appendChild(labelText);
+      labelGroup.appendChild(checkbox);
+      labelGroup.appendChild(labelText);
+      row.appendChild(labelGroup);
 
-      const rightGroup = document.createElement("span");
-      rightGroup.style.cssText = "color:#8b949e;font-family:monospace;font-size:11px;";
-      rightGroup.textContent = p.pn;
+      const rightGroup = document.createElement("div");
+      rightGroup.style.cssText = "display:flex;align-items:center;gap:6px;";
 
-      row.appendChild(leftGroup);
+      const pnSpan = document.createElement("span");
+      pnSpan.textContent = p.pn;
+      pnSpan.style.cssText = "color:#8b949e;font-family:monospace;font-size:11px;margin-right:4px;";
+
+      const editBtn = document.createElement("button");
+      editBtn.textContent = "✏️";
+      editBtn.title = "Edit Part";
+      editBtn.style.cssText = "background:transparent;border:none;cursor:pointer;font-size:12px;padding:2px 4px;";
+      editBtn.onclick = (e) => {
+        e.stopPropagation();
+        let newDesc = prompt("Edit Part Description:", p.name);
+        if (newDesc !== null && newDesc.trim() !== "") {
+          let newPn = prompt("Edit Part Number:", p.pn);
+          if (newPn !== null && newPn.trim() !== "") {
+            const { highlightParts: hList, standardParts: sList } = getStoredData();
+
+            if (selectedParts.has(p.name)) {
+              selectedParts.delete(p.name);
+              selectedParts.add(newDesc.trim());
+            }
+
+            const updateArray = (arr) => {
+              const idx = arr.findIndex(item => item.name === p.name);
+              if (idx !== -1) arr[idx] = { name: newDesc.trim(), pn: newPn.trim() };
+            };
+
+            updateArray(hList);
+            updateArray(sList);
+
+            saveData(hList, sList);
+            updateSelectionPanel();
+            renderParts(document.getElementById("j_search").value);
+          }
+        }
+      };
+
+      const delBtn = document.createElement("button");
+      delBtn.textContent = "✕";
+      delBtn.title = "Delete Part";
+      delBtn.style.cssText = "background:transparent;color:#da3633;border:none;cursor:pointer;font-weight:bold;font-size:12px;padding:2px 4px;";
+      delBtn.onclick = (e) => {
+        e.stopPropagation();
+        selectedParts.delete(p.name);
+        updateSelectionPanel();
+
+        const { highlightParts: hList, standardParts: sList } = getStoredData();
+        const newH = hList.filter(item => item.name !== p.name);
+        const newS = sList.filter(item => item.name !== p.name);
+
+        saveData(newH, newS);
+        renderParts(document.getElementById("j_search").value);
+      };
+
+      rightGroup.appendChild(pnSpan);
+      rightGroup.appendChild(editBtn);
+      rightGroup.appendChild(delBtn);
       row.appendChild(rightGroup);
+
       return row;
     };
 
@@ -220,21 +346,9 @@
     renderParts(e.target.value);
   });
 
-  document.getElementById("j_copy").onclick = () => {
-    let checkedEls = Array.from(box.querySelectorAll(".j_chk:checked"));
-    checkedEls.forEach(cb => recordUsage(cb.value));
-
-    let selectedParts = checkedEls.map((cb) => cb.value);
-    let partsText = selectedParts.length ? selectedParts.join(", ") : "None";
-    let text = `Parts replaced are as follows:\n${partsText}.`;
-
-    applyTextToDOM(text);
-    overlay.remove();
-  };
-
   document.getElementById("j_add_btn").onclick = () => {
     const name = prompt("Enter Part Name:");
-    if (!name) return;
+    if (!name || !name.trim()) return;
     const pn = prompt("Enter Part Number (or N/A):") || "N/A";
     const isHigh = confirm("Should this part be highlighted in yellow?");
 
@@ -249,7 +363,9 @@
   };
 
   document.getElementById("j_reset_btn").onclick = () => {
-    if (confirm("Reset all parts back to initial defaults?")) {
+    if (confirm("Reset Joey parts list back to initial defaults?")) {
+      selectedParts.clear();
+      updateSelectionPanel();
       saveData(initialHighlightParts, initialStandardParts);
       renderParts(document.getElementById("j_search").value);
     }
@@ -259,8 +375,8 @@
     const { highlightParts, standardParts } = getStoredData();
     let scriptContent = runJoeyInHouse.toString();
     scriptContent = `(${scriptContent})();`;
-    scriptContent = scriptContent.replace(/const initialHighlightParts = \[[^]*?\];/, `const initialHighlightParts = ${JSON.stringify(highlightParts, null, 2)};`);
-    scriptContent = scriptContent.replace(/const initialStandardParts = \[[^]*?\];/, `const initialStandardParts = ${JSON.stringify(standardParts, null, 2)};`);
+    scriptContent = scriptContent.replace(/const initialHighlightParts = \[\s[\s\S]*?\];/, `const initialHighlightParts = ${JSON.stringify(highlightParts, null, 2)};`);
+    scriptContent = scriptContent.replace(/const initialStandardParts = \[\s[\s\S]*?\];/, `const initialStandardParts = ${JSON.stringify(standardParts, null, 2)};`);
 
     const blob = new Blob([scriptContent], { type: "application/javascript;charset=utf-8" });
     const url = URL.createObjectURL(blob);
@@ -288,23 +404,38 @@
         const sMatch = text.match(/const initialStandardParts = (\[[\s\S]*?\]);/);
 
         if (hMatch && sMatch) {
+          selectedParts.clear();
+          updateSelectionPanel();
           saveData(JSON.parse(hMatch[1]), JSON.parse(sMatch[1]));
           renderParts(document.getElementById("j_search").value);
-          alert("Successfully imported parts from JS script!");
+          alert("Successfully imported Joey parts file!");
         } else {
           const parsed = JSON.parse(text);
           if (parsed.highlightParts && parsed.standardParts) {
+            selectedParts.clear();
+            updateSelectionPanel();
             saveData(parsed.highlightParts, parsed.standardParts);
             renderParts(document.getElementById("j_search").value);
-            alert("Successfully imported parts!");
+            alert("Successfully imported Joey parts file!");
           } else throw new Error("Invalid structure");
         }
       } catch (err) {
-        alert("Failed to parse file. Upload a valid .js or .json configuration.");
+        alert("Failed to parse imported file. Upload a valid .js or .json file.");
       }
     };
     reader.readAsText(file);
     fileInput.value = "";
+  };
+
+  document.getElementById("j_copy").onclick = () => {
+    const selectedArr = Array.from(selectedParts);
+    selectedArr.forEach(p => recordUsage(p));
+
+    let partsText = selectedArr.length ? selectedArr.join(", ") : "None";
+    let text = `Parts replaced are as follows:\n${partsText}.`;
+
+    applyTextToDOM(text);
+    overlay.remove();
   };
 
   const close = () => overlay.remove();
