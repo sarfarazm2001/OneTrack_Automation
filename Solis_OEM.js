@@ -263,8 +263,16 @@
       checkbox.style.cssText = "transform:scale(1.1);cursor:pointer;";
 
       checkbox.onchange = (e) => {
-        if (e.target.checked) selectedParts.add(partName);
-        else selectedParts.delete(partName);
+        if (e.target.checked) {
+          selectedParts.add(partName);
+          const searchInput = document.getElementById("s_search");
+          if (searchInput && searchInput.value) {
+            searchInput.value = "";
+            renderParts("");
+          }
+        } else {
+          selectedParts.delete(partName);
+        }
         updateSelectionPanel();
       };
 
@@ -275,7 +283,7 @@
       labelGroup.appendChild(labelText);
       row.appendChild(labelGroup);
 
-      // Edit / Delete buttons
+      // Delete button
       const btnGroup = document.createElement("div");
       btnGroup.style.cssText = "display:flex;gap:4px;margin-left:8px;";
 
