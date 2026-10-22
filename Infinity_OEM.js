@@ -13,7 +13,8 @@
     { name: "Top Housing", pn: "56717-001/80782-001" }
   ];
 
-  const selectedParts = new Set();
+  // Pre-select "INF Eval" on initial launch
+  const selectedParts = new Set(["INF Eval"]);
 
   function getStoredParts() {
     try {
@@ -260,6 +261,7 @@
   }
 
   renderParts();
+  updateSelectionPanel();
 
   document.getElementById("inf_search").addEventListener("input", (e) => {
     renderParts(e.target.value);
@@ -279,6 +281,7 @@
   document.getElementById("inf_reset_btn").onclick = () => {
     if (confirm("Reset Infinity parts list back to initial defaults?")) {
       selectedParts.clear();
+      selectedParts.add("INF Eval");
       updateSelectionPanel();
       saveStoredParts(initialParts);
       renderParts(document.getElementById("inf_search").value);
@@ -318,6 +321,7 @@
 
         if (Array.isArray(imported) && imported.length > 0) {
           selectedParts.clear();
+          selectedParts.add("INF Eval");
           updateSelectionPanel();
           saveStoredParts(imported);
           renderParts(document.getElementById("inf_search").value);
