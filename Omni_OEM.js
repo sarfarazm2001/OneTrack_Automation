@@ -10,7 +10,8 @@
     { name: "KANGAROO PUMP OVERLAY", pn: "PT00031552" },
     { name: "KANGAROO PUMP SPEAKER COVER", pn: "PT00106015" },
     { name: "KANGAROO PUMP VALVE GEARBOX", pn: "PT00093436" },
-    { name: "KANGAROO PUMP 6-ROLLER ROTOR ASSY", pn: "PT00093668" }
+    { name: "KANGAROO PUMP 6-ROLLER ROTOR ASSY", pn: "PT00093668" },
+    { name: "CONNECT, CLEAR LENS", pn: "PT00031552" }
   ];
 
   const selectedParts = new Set();
@@ -195,8 +196,16 @@
       checkbox.style.cssText = "transform:scale(1.1);cursor:pointer;";
 
       checkbox.onchange = (e) => {
-        if (e.target.checked) selectedParts.add(part.name);
-        else selectedParts.delete(part.name);
+        if (e.target.checked) {
+          selectedParts.add(part.name);
+          const searchInput = document.getElementById("o_search");
+          if (searchInput && searchInput.value) {
+            searchInput.value = "";
+            renderParts("");
+          }
+        } else {
+          selectedParts.delete(part.name);
+        }
         updateSelectionPanel();
       };
 
