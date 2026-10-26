@@ -7,6 +7,7 @@
     "NELC": ["Alexsis Gauthier", "Sheryl Guyer", "Lauren Lynch", "Michael O'Connor", "Joshua Kronick", "Nicholas McCafferty"],
     "OPTION CARE": ["Brian Fitzpatrick"],
     "OPTUM": ["Janey Mechler", "Heather LeClair"],
+    "TRINITY INFUSION": ["Shawn Huddleston"]
     "Walgreens": ["Carl Kerekes"]
   };
 
