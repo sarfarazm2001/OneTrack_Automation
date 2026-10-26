@@ -7,25 +7,25 @@
     "NELC": ["Alexsis Gauthier", "Sheryl Guyer", "Lauren Lynch", "Michael O'Connor", "Joshua Kronick", "Nicholas McCafferty"],
     "OPTION CARE": ["Brian Fitzpatrick"],
     "OPTUM": ["Janey Mechler", "Heather LeClair"],
-    "TRINITY INFUSION": ["Shawn Huddleston"]
+    "TRINITY INFUSION": ["Shawn Huddleston"],
     "Walgreens": ["Carl Kerekes"]
   };
 
   const initialDefaults = [
-  "Outdated battery and it needs to be changed. (JOEY)",
-  "Battery replaced on {DATE}. (JOEY)",
-  "This device is under warranty.",
-  "Volume Calibrated. (CURLIN)",
-  "Pressure strains calibrated. (CURLIN)",
-  "Baseline Calibrated. (CURLIN)",
-  "No issue found. PM was successful.",
-  "No response from client. Returning unrepaired.",
-  "Software needs to be updated to 97-0625-010600-01. (SOLIS)",
-  "Software updated to 97-0625-010600-01 at McKesson. (SOLIS)",
-  "Software needs to be updated to 97-0625-010600-01(M). (SOLIS)",
-  "Software updated to 97-0625-010600-01(M) at McKesson. (SOLIS)",
-  "Completed 10 day charge cycle per OEM recommendation. Passed all functional tests without error and passed PM per manufacturer specifications."
-];
+    "Outdated battery and it needs to be changed. (JOEY)",
+    "Battery replaced on {DATE}. (JOEY)",
+    "This device is under warranty.",
+    "Volume Calibrated. (CURLIN)",
+    "Pressure strains calibrated. (CURLIN)",
+    "Baseline Calibrated. (CURLIN)",
+    "No issue found. PM was successful.",
+    "No response from client. Returning unrepaired.",
+    "Software needs to be updated to 97-0625-010600-01. (SOLIS)",
+    "Software updated to 97-0625-010600-01 at McKesson. (SOLIS)",
+    "Software needs to be updated to 97-0625-010600-01(M). (SOLIS)",
+    "Software updated to 97-0625-010600-01(M) at McKesson. (SOLIS)",
+    "Completed 10 day charge cycle per OEM recommendation. Passed all functional tests without error and passed PM per manufacturer specifications."
+  ];
 
   function getTodayFormatted() {
     const d = new Date();
@@ -50,12 +50,13 @@
   }
 
   function getCustomContacts() {
-    try { return JSON.parse(localStorage.getItem('af_custom_contacts') || '[]'); } catch(e) { return []; }
+    try { return JSON.parse(localStorage.getItem('af_custom_contacts') || '{}'); } catch(e) { return {}; }
   }
 
-  function saveCustomContact(name) {
-    const customs = getCustomContacts();
-    customs.push(name);
+  function saveCustomContact(company, name) {
+    let customs = getCustomContacts();
+    if (!customs[company]) customs[company] = [];
+    if (!customs[company].includes(name)) customs[company].push(name);
     localStorage.setItem('af_custom_contacts', JSON.stringify(customs));
   }
 
@@ -68,7 +69,6 @@
   function applyTextToDOM(rawText) {
     const text = cleanBracketContent(rawText);
 
-    // Auto-copy to Clipboard
     if (navigator.clipboard && navigator.clipboard.writeText) {
       navigator.clipboard.writeText(text).catch(err => console.warn("Clipboard copy failed:", err));
     }
@@ -163,11 +163,21 @@
   function renderGroupedContacts() {
     personSelect.innerHTML = '<option value="">Authorized Person...</option>';
 
-    Object.keys(companyContacts).sort().forEach(company => {
+    const customs = getCustomContacts();
+    const mergedContacts = { ...companyContacts };
+    Object.keys(customs).forEach(comp => {
+      if (mergedContacts[comp]) {
+        mergedContacts[comp] = [...new Set([...mergedContacts[comp], ...customs[comp]])];
+      } else {
+        mergedContacts[comp] = customs[comp];
+      }
+    });
+
+    Object.keys(mergedContacts).sort().forEach(company => {
       const group = document.createElement('optgroup');
       group.label = company;
 
-      companyContacts[company].sort().forEach(name => {
+      mergedContacts[company].sort().forEach(name => {
         const opt = document.createElement('option');
         opt.value = name;
         opt.textContent = name;
@@ -176,21 +186,6 @@
 
       personSelect.appendChild(group);
     });
-
-    const customs = getCustomContacts();
-    if (customs.length > 0) {
-      const customGroup = document.createElement('optgroup');
-      customGroup.label = "CUSTOM CONTACTS";
-
-      customs.sort().forEach(name => {
-        const opt = document.createElement('option');
-        opt.value = name;
-        opt.textContent = name;
-        customGroup.appendChild(opt);
-      });
-
-      personSelect.appendChild(customGroup);
-    }
   }
 
   renderGroupedContacts();
@@ -199,9 +194,15 @@
     const repName = prompt("Enter Authorized Person Name (e.g., John Smith):");
     if (!repName || !repName.trim()) return;
 
-    saveCustomContact(repName.trim());
+    const companyName = prompt("Enter Company Name for this Rep (e.g., CVS, Optum, etc.):");
+    if (!companyName || !companyName.trim()) return;
+
+    const formattedCompany = companyName.trim();
+    const formattedRep = repName.trim();
+
+    saveCustomContact(formattedCompany, formattedRep);
     renderGroupedContacts();
-    personSelect.value = repName.trim();
+    personSelect.value = formattedRep;
   };
 
   const listContainer = document.getElementById('af_presets_list');
