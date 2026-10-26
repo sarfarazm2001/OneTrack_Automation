@@ -49,26 +49,29 @@
     localStorage.setItem('af_preset_list_v2', JSON.stringify(list));
   }
 
-  // Safe custom contacts loader that handles legacy array formats smoothly
   function getCustomContacts() {
     try {
-      const raw = localStorage.getItem('af_custom_contacts');
-      if (!raw) return {};
-      const parsed = JSON.parse(raw);
-      if (Array.isArray(parsed)) {
-        return { "Custom Contacts": parsed };
+      const stored = localStorage.getItem('af_custom_contacts_v2');
+      if (stored) return JSON.parse(stored);
+
+      // Migration for legacy array format
+      const old = localStorage.getItem('af_custom_contacts');
+      if (old) {
+        const arr = JSON.parse(old);
+        if (Array.isArray(arr)) return { "CUSTOM CONTACTS": arr };
       }
-      return parsed || {};
-    } catch(e) {
-      return {};
-    }
+    } catch(e) {}
+    return {};
   }
 
-  function saveCustomContact(company, name) {
-    let customs = getCustomContacts();
-    if (!customs[company]) customs[company] = [];
-    if (!customs[company].includes(name)) customs[company].push(name);
-    localStorage.setItem('af_custom_contacts', JSON.stringify(customs));
+  function saveCustomContact(name, company) {
+    const customs = getCustomContacts();
+    const compKey = company && company.trim() ? company.trim() : "CUSTOM CONTACTS";
+    if (!customs[compKey]) customs[compKey] = [];
+    if (!customs[compKey].includes(name)) {
+      customs[compKey].push(name);
+    }
+    localStorage.setItem('af_custom_contacts_v2', JSON.stringify(customs));
   }
 
   // Strip brackets/parentheses content before inserting text
@@ -80,6 +83,7 @@
   function applyTextToDOM(rawText) {
     const text = cleanBracketContent(rawText);
 
+    // Auto-copy to Clipboard
     if (navigator.clipboard && navigator.clipboard.writeText) {
       navigator.clipboard.writeText(text).catch(err => console.warn("Clipboard copy failed:", err));
     }
@@ -174,24 +178,25 @@
   function renderGroupedContacts() {
     personSelect.innerHTML = '<option value="">Authorized Person...</option>';
 
-    const customs = getCustomContacts();
-    const mergedContacts = { ...companyContacts };
-    
-    Object.keys(customs).forEach(comp => {
-      if (mergedContacts[comp]) {
-        mergedContacts[comp] = [...new Set([...mergedContacts[comp], ...(Array.isArray(customs[comp]) ? customs[comp] : [])])];
-      } else {
-        mergedContacts[comp] = Array.isArray(customs[comp]) ? customs[comp] : [];
-      }
+    const combined = {};
+    Object.keys(companyContacts).forEach(c => {
+      combined[c] = [...companyContacts[c]];
     });
 
-    Object.keys(mergedContacts).sort().forEach(company => {
-      if (!Array.isArray(mergedContacts[company]) || mergedContacts[company].length === 0) return;
-      
+    const customs = getCustomContacts();
+    Object.keys(customs).forEach(c => {
+      if (!combined[c]) combined[c] = [];
+      customs[c].forEach(name => {
+        if (!combined[c].includes(name)) combined[c].push(name);
+      });
+    });
+
+    Object.keys(combined).sort().forEach(company => {
+      if (combined[company].length === 0) return;
       const group = document.createElement('optgroup');
       group.label = company;
 
-      mergedContacts[company].sort().forEach(name => {
+      combined[company].sort().forEach(name => {
         const opt = document.createElement('option');
         opt.value = name;
         opt.textContent = name;
@@ -208,15 +213,11 @@
     const repName = prompt("Enter Authorized Person Name (e.g., John Smith):");
     if (!repName || !repName.trim()) return;
 
-    const companyName = prompt("Enter Company Name for this Rep (e.g., CVS, Optum, etc.):");
-    if (!companyName || !companyName.trim()) return;
+    const companyName = prompt("Enter Company Name (e.g., CORAM, OPTION CARE, AmeriMed, etc.):");
 
-    const formattedCompany = companyName.trim();
-    const formattedRep = repName.trim();
-
-    saveCustomContact(formattedCompany, formattedRep);
+    saveCustomContact(repName.trim(), companyName ? companyName.trim() : "CUSTOM CONTACTS");
     renderGroupedContacts();
-    personSelect.value = formattedRep;
+    personSelect.value = repName.trim();
   };
 
   const listContainer = document.getElementById('af_presets_list');
