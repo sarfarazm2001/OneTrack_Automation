@@ -49,8 +49,19 @@
     localStorage.setItem('af_preset_list_v2', JSON.stringify(list));
   }
 
+  // Safe custom contacts loader that handles legacy array formats smoothly
   function getCustomContacts() {
-    try { return JSON.parse(localStorage.getItem('af_custom_contacts') || '{}'); } catch(e) { return {}; }
+    try {
+      const raw = localStorage.getItem('af_custom_contacts');
+      if (!raw) return {};
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed)) {
+        return { "Custom Contacts": parsed };
+      }
+      return parsed || {};
+    } catch(e) {
+      return {};
+    }
   }
 
   function saveCustomContact(company, name) {
@@ -165,15 +176,18 @@
 
     const customs = getCustomContacts();
     const mergedContacts = { ...companyContacts };
+    
     Object.keys(customs).forEach(comp => {
       if (mergedContacts[comp]) {
-        mergedContacts[comp] = [...new Set([...mergedContacts[comp], ...customs[comp]])];
+        mergedContacts[comp] = [...new Set([...mergedContacts[comp], ...(Array.isArray(customs[comp]) ? customs[comp] : [])])];
       } else {
-        mergedContacts[comp] = customs[comp];
+        mergedContacts[comp] = Array.isArray(customs[comp]) ? customs[comp] : [];
       }
     });
 
     Object.keys(mergedContacts).sort().forEach(company => {
+      if (!Array.isArray(mergedContacts[company]) || mergedContacts[company].length === 0) return;
+      
       const group = document.createElement('optgroup');
       group.label = company;
 
