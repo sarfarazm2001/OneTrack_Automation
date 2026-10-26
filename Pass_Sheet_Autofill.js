@@ -53,7 +53,6 @@ javascript:(function(){
     overlay.appendChild(box);
     document.body.appendChild(overlay);
 
-    // Import Event Handlers
     document.getElementById('te_import_btn').onclick=()=>{ document.getElementById('te_import_file').click(); };
     document.getElementById('te_import_file').onchange=(e)=>{
       let file=e.target.files[0];
@@ -80,19 +79,12 @@ javascript:(function(){
       reader.readAsText(file);
     };
 
-    // Export Event Handler
     document.getElementById('te_export_btn').onclick=()=>{
       try{
         let currentConfig=parseInputFormat(document.getElementById('cfg_txt').value);
-        let currentScript=arguments.callee.caller ? arguments.callee.caller.toString() : "";
-        
         let scriptSource = (arguments.callee && arguments.callee.toString().length > 100) 
           ? arguments.callee.toString() 
           : window.te_modal_script_source || "";
-
-        if(!scriptSource){
-          alert("Exporting source script directly...");
-        }
 
         let updatedConfigJson=JSON.stringify(currentConfig, null, 2);
         let updatedScriptSource=scriptSource.replace(
@@ -183,6 +175,12 @@ javascript:(function(){
     let container=document.createElement('div');
     container.style.cssText='max-height:190px;overflow-y:auto;margin-bottom:14px;padding-right:4px;';
     
+    const isCurlin = String(deviceKey).toUpperCase() === 'CURLIN';
+    let savedSelected = [];
+    if (isCurlin) {
+      try { savedSelected = JSON.parse(localStorage.getItem('curlin_last_selected_tes') || '[]'); } catch(e){}
+    }
+
     options.forEach(opt=>{
       let lbl=document.createElement('label');
       lbl.style.cssText='display:flex;align-items:center;padding:7px 8px;cursor:pointer;font-size:14px;font-weight:500;border-radius:6px;user-select:none;margin-bottom:3px;';
@@ -195,8 +193,17 @@ javascript:(function(){
       chk.className='te_chk_hidden';
       chk.style.display='none';
 
+      let isPreSelected = isCurlin && savedSelected.includes(opt);
+      chk.checked = isPreSelected;
+
       let customBox=document.createElement('span');
       customBox.style.cssText='width:16px;height:16px;border:1.5px solid #484f58;border-radius:4px;background:#0d1117;margin-right:12px;display:flex;align-items:center;justify-content:center;flex-shrink:0;box-sizing:border-box;';
+
+      if (isPreSelected) {
+        customBox.style.background='#3b82f6';
+        customBox.style.borderColor='#3b82f6';
+        customBox.innerHTML='<svg viewBox="0 0 14 14" style="width:10px;height:10px;display:block;" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 7L5.5 10L11.5 3.5"/></svg>';
+      }
 
       lbl.onclick=(e)=>{
         e.preventDefault();
@@ -219,7 +226,6 @@ javascript:(function(){
     });
     box.appendChild(container);
 
-    const isCurlin = String(deviceKey).toUpperCase() === 'CURLIN';
     if(isCurlin){
       let savedCustom = localStorage.getItem('curlin_last_custom_te') || '';
       let customDiv=document.createElement('div');
@@ -237,6 +243,7 @@ javascript:(function(){
     submitBtn.onclick=()=>{
       let selected=Array.from(container.querySelectorAll('.te_chk_hidden:checked')).map(c=>c.value);
       if(isCurlin){
+        localStorage.setItem('curlin_last_selected_tes', JSON.stringify(selected));
         const inp = document.getElementById('custom_te_input');
         let customVal=inp ? inp.value.trim() : '';
         if(customVal){
