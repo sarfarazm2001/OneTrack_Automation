@@ -10,7 +10,8 @@
     { name: "Rotor Assembly", pn: "28483-001", customName: "Rotor Housing" },
     { name: "Canon Motor", pn: "42611", customName: "Canon Motor" },
     { name: "Infinity II PCB Assembly", pn: "43763-101" },
-    { name: "Top Housing", pn: "56717-001/80782-001" }
+    { name: "Top Housing", pn: "56717-001/80782-001" },
+    { name: "Motor (Orange)", pn: "84239" }
   ];
 
   // Pre-select "INF Eval" on initial launch
