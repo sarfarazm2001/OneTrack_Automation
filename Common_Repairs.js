@@ -7,6 +7,7 @@
     "Bubbled keypad",
     "Needs pressure strains calibration.",
     "Torn up keypad",
+    "PCB replacement required.",
     "Cracked door clasp.",
     "Broken door clasp.",
     "Faded SN label.",
