@@ -26,6 +26,7 @@
     "Strong smoke smell",
     "Marker stain on the door",
     "Some kind of ink stain on rubber case",
+    "Outdated battery and it needs to be changed. (JOEY)",
     "BT2 reading:",
     "BT3 reading:",
     "Error Code:",
