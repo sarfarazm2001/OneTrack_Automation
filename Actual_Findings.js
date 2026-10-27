@@ -12,7 +12,6 @@
   };
 
   const initialDefaults = [
-    "Outdated battery and it needs to be changed. (JOEY)",
     "Battery replaced on {DATE}. (JOEY)",
     "This device is under warranty.",
     "Volume Calibrated. (CURLIN)",
