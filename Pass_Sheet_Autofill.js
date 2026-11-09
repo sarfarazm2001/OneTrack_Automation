@@ -24,7 +24,6 @@ javascript:(function(){
       try {
         let parsed = JSON.parse(saved);
         let updated = false;
-        // Automatically merge any new default devices/keys if they are missing
         for (let key in DEFAULT_DATA) {
           if (!parsed[key]) {
             parsed[key] = DEFAULT_DATA[key];
@@ -52,7 +51,6 @@ javascript:(function(){
       <p style="font-size:11px;color:#666;margin-bottom:10px;">Enter DEVICE: TE1, TE2 (one per line) or paste JSON:</p>
       <textarea id="cfg_txt" style="width:90%;height:140px;font-family:monospace;font-size:12px;padding:6px;margin-bottom:10px;">${toTextFormat(initialData)}</textarea>
       
-      <!-- Import / Export Controls -->
       <div style="display:flex;gap:6px;margin-bottom:12px;">
         <input type="file" id="te_import_file" accept=".js,.json,.txt" style="display:none;">
         <button id="te_import_btn" style="flex:1;padding:6px;background:#17a2b8;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:11px;font-weight:bold;">📥 Import File</button>
@@ -190,10 +188,15 @@ javascript:(function(){
     let container=document.createElement('div');
     container.style.cssText='max-height:190px;overflow-y:auto;margin-bottom:14px;padding-right:4px;';
     
-    const isCurlin = String(deviceKey).toUpperCase() === 'CURLIN';
+    const devKeyUpper = String(deviceKey).toUpperCase();
+    const isCurlin = devKeyUpper === 'CURLIN';
+    const is8000 = devKeyUpper === '8000';
+    
     let savedSelected = [];
     if (isCurlin) {
       try { savedSelected = JSON.parse(localStorage.getItem('curlin_last_selected_tes') || '[]'); } catch(e){}
+    } else if (is8000) {
+      try { savedSelected = JSON.parse(localStorage.getItem('8000_last_selected_tes') || '[]'); } catch(e){}
     }
 
     options.forEach(opt=>{
@@ -208,7 +211,7 @@ javascript:(function(){
       chk.className='te_chk_hidden';
       chk.style.display='none';
 
-      let isPreSelected = isCurlin && savedSelected.includes(opt);
+      let isPreSelected = (isCurlin || is8000) && savedSelected.includes(opt);
       chk.checked = isPreSelected;
 
       let customBox=document.createElement('span');
@@ -265,6 +268,8 @@ javascript:(function(){
           localStorage.setItem('curlin_last_custom_te', customVal);
           selected.push(customVal);
         }
+      } else if(is8000){
+        localStorage.setItem('8000_last_selected_tes', JSON.stringify(selected));
       }
       document.body.removeChild(overlay);
       callback(selected);
