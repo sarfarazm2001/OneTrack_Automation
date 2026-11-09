@@ -21,7 +21,22 @@ javascript:(function(){
   function getDeviceData(callback){
     let saved=localStorage.getItem('my_te_config');
     if(saved){
-      try{callback(JSON.parse(saved));return;}catch(e){console.error(e);}
+      try {
+        let parsed = JSON.parse(saved);
+        let updated = false;
+        // Automatically merge any new default devices/keys if they are missing
+        for (let key in DEFAULT_DATA) {
+          if (!parsed[key]) {
+            parsed[key] = DEFAULT_DATA[key];
+            updated = true;
+          }
+        }
+        if (updated) {
+          localStorage.setItem('my_te_config', JSON.stringify(parsed));
+        }
+        callback(parsed);
+        return;
+      } catch(e){ console.error(e); }
     }
     promptForConfig(DEFAULT_DATA,callback);
   }
