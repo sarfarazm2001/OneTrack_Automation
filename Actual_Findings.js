@@ -13,6 +13,7 @@
 
   const initialDefaults = [
     "Battery replaced on {DATE}. (JOEY)",
+    "PM Passed.",
     "This device is under warranty.",
     "Volume Calibrated. (CURLIN)",
     "Pressure strains calibrated. (CURLIN)",
