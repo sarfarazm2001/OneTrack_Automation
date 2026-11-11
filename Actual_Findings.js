@@ -27,7 +27,7 @@
     "Volume Calibrated. (CURLIN)",
     "Pressure strains calibrated. (CURLIN)",
     "Baseline Calibrated. (CURLIN)",
-    "No issue found. PM was successful.",
+    "No issue found.",
     "No response from client. Returning unrepaired.",
     "Software needs to be updated to 97-0625-010600-01. (SOLIS)",
     "Software updated to 97-0625-010600-01 at McKesson. (SOLIS)",
