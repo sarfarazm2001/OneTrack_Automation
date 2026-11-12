@@ -29,9 +29,7 @@
     "Baseline Calibrated. (CURLIN)",
     "No issue found.",
     "No response from client. Returning unrepaired.",
-    "Software needs to be updated to 97-0625-010600-01. (SOLIS)",
     "Software updated to 97-0625-010600-01 at McKesson. (SOLIS)",
-    "Software needs to be updated to 97-0625-010600-01(M). (SOLIS)",
     "Software updated to 97-0625-010600-01(M) at McKesson. (SOLIS)",
     "Completed 10 day charge cycle per OEM recommendation. Passed all functional tests without error and passed PM per manufacturer specifications."
   ];
