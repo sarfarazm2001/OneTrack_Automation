@@ -1,0 +1,454 @@
+// ==UserScript==
+// @name         Biomed OneTrack Toolkit
+// @namespace    http://tampermonkey.net/
+// @version      5.5
+// @description  Unified automation toolkit for Biomed OneTrack workflows
+// @match        https://*.mckesson.com/*
+// @match        http://*.mckesson.com/*
+// @grant        none
+// ==/UserScript==
+
+(function() {
+    'use strict';
+
+    const DEFAULT_SHORTCUTS = {
+        psa: 'p', af: 'a', ifr: 'f', pm90: '9', ra: 'r', cr: 'x',
+        solis: 's', curlin: 'c', omni: 'o', infinity: 'i', joey_oem: 'j', joey_in: 'h'
+    };
+
+    function getConfig() {
+        try {
+            const stored = localStorage.getItem('ot_direct_hotkeys_v1');
+            if (stored) return { ...DEFAULT_SHORTCUTS, ...JSON.parse(stored) };
+        } catch(e) {}
+        return { ...DEFAULT_SHORTCUTS };
+    }
+
+    function saveConfig(cfg) {
+        localStorage.setItem('ot_direct_hotkeys_v1', JSON.stringify(cfg));
+    }
+
+    function getUsage() {
+        try { return JSON.parse(localStorage.getItem('ot_mru') || '{}'); }
+        catch(e) { return {}; }
+    }
+
+    function recordUsage(id) {
+        let u = getUsage();
+        u[id] = Date.now();
+        localStorage.setItem('ot_mru', JSON.stringify(u));
+    }
+
+    const base = 'https://raw.githubusercontent.com/sarfarazm2001/OneTrack_Automation/main/';
+    const scripts = {
+        psa: base + 'Pass_Sheet_Autofill.js',
+        af: base + 'Actual_Findings.js',
+        ifr: base + 'Infinity_Flat_Rate.js',
+        pm90: base + '90_days_Calculator.js',
+        ra: base + 'Repair_Authorization.js',
+        cr: base + 'Common_Repairs.js',
+        solis: base + 'Solis_OEM.js',
+        curlin: base + 'Curlin_OEM.js',
+        omni: base + 'Omni_OEM.js',
+        infinity: base + 'Infinity_OEM.js',
+        joey_oem: base + 'Joey_OEM.js',
+        joey_in: base + 'Joey_In_House.js'
+    };
+
+    const toolMeta = [
+        { id: 'psa', label: 'Pass Sheet (PSA)', icon: '⚡', bg: '#238636', type: 'general' },
+        { id: 'af', label: 'Actual Findings (AF)', icon: '📝', bg: '#1f6feb', type: 'general' },
+        { id: 'ifr', label: 'Infinity Flat Rate', icon: '💲', bg: '#8957e5', type: 'general' },
+        { id: 'pm90', label: '90 Days PM Calc', icon: '⏱', bg: '#d29922', type: 'general' },
+        { id: 'ra', label: 'Repair Auth', icon: '📄', bg: '#6e40c9', type: 'general' },
+        { id: 'cr', label: 'Common Repairs', icon: '🛠️', bg: '#0969da', type: 'general' },
+        { id: 'solis', label: 'Solis OEM', icon: '', bg: '#161b22', border: '#30363d', type: 'oem' },
+        { id: 'curlin', label: 'Curlin OEM', icon: '', bg: '#161b22', border: '#30363d', type: 'oem' },
+        { id: 'omni', label: 'Omni OEM', icon: '', bg: '#161b22', border: '#30363d', type: 'oem' },
+        { id: 'infinity', label: 'Infinity OEM', icon: '', bg: '#161b22', border: '#30363d', type: 'oem' },
+        { id: 'joey_oem', label: 'Joey OEM', icon: '', bg: '#161b22', border: '#30363d', type: 'oem' },
+        { id: 'joey_in', label: 'Joey In House', icon: '', bg: '#161b22', border: '#30363d', type: 'oem' }
+    ];
+
+    function getUniqueTicketNumber() {
+        const urlParams = new URLSearchParams(window.location.search);
+        let ticket = urlParams.get('ticket') || urlParams.get('wo') || urlParams.get('id') || urlParams.get('WorkOrder');
+
+        if (!ticket) {
+            const ticketElem = document.querySelector('#txtTicketNumber, #ticketNumber, .ticket-header-id, [data-ticket-id]');
+            if (ticketElem) {
+                const val = ticketElem.value || ticketElem.innerText;
+                if (val && !val.toLowerCase().includes('queue')) ticket = val;
+            }
+        }
+
+        if (!ticket) {
+            const urlMatch = window.location.href.match(/(?:ticket|wo|order)[\/=\-_]?([A-Z0-9]{5,15})/i);
+            if (urlMatch && !urlMatch[1].toLowerCase().includes('queue')) ticket = urlMatch[1];
+        }
+
+        if (ticket && ticket.trim().length > 0 && !ticket.toLowerCase().includes('queue')) {
+            return ticket.trim();
+        }
+
+        const uniqueHex = Math.floor(Math.random() * 0xFFFFFF).toString(16).toUpperCase().padStart(6, '0');
+        return `TK-${uniqueHex}`;
+    }
+
+    window._otWatchDOM = false;
+    const domObserver = new MutationObserver(mutations => {
+        if (!window._otWatchDOM) return;
+        mutations.forEach(m => {
+            m.addedNodes.forEach(node => {
+                if (node.nodeType === 1) {
+                    node.setAttribute('data-ot-child-tool', 'true');
+                }
+            });
+        });
+    });
+    domObserver.observe(document.body, { childList: true });
+
+    window.runOTTool = function(id) {
+        recordUsage(id);
+        let modal = document.getElementById('ot-toolkit-overlay');
+        if (modal) modal.remove();
+
+        if (scripts[id]) {
+            fetch(scripts[id] + '?v=' + Date.now())
+                .then(r => r.text())
+                .then(code => {
+                    window._otWatchDOM = true;
+
+                    let scriptEl = document.createElement('script');
+                    scriptEl.textContent = code;
+                    document.documentElement.appendChild(scriptEl);
+                    scriptEl.remove();
+
+                    setTimeout(() => { window._otWatchDOM = false; }, 800);
+                })
+                .catch(err => alert('Error loading script: ' + err.message));
+        }
+    };
+
+    window.toggleCustomization = function() {
+        let panel = document.getElementById('ot_custom_panel');
+        let arrow = document.getElementById('ot_custom_arrow');
+        if (panel) {
+            if (panel.style.display === 'none') {
+                panel.style.display = 'block';
+                if (arrow) arrow.textContent = '▲';
+            } else {
+                panel.style.display = 'none';
+                if (arrow) arrow.textContent = '▼';
+            }
+        }
+    };
+
+    window.saveCustomKeys = function() {
+        const cfg = getConfig();
+        for (let key in cfg) {
+            let input = document.getElementById('hk_input_' + key);
+            if (input) cfg[key] = input.value.trim().toLowerCase();
+        }
+        saveConfig(cfg);
+
+        alert('Settings saved!');
+        toggleMenu();
+        toggleMenu();
+    };
+
+    window.resetCustomKeys = function() {
+        saveConfig(DEFAULT_SHORTCUTS);
+        alert('Settings reset to default!');
+        toggleMenu();
+        toggleMenu();
+    };
+
+    function processFullImage(file, callback) {
+        const reader = new FileReader();
+        reader.onload = function(e) { callback(e.target.result); };
+        reader.readAsDataURL(file);
+    }
+
+    // --- ENHANCED FEEDBACK MODAL ---
+    window.sendToolkitFeedback = function() {
+        if (document.getElementById('ot-feedback-modal')) return;
+
+        let pastedImageBase64 = null;
+
+        const modal = document.createElement('div');
+        modal.id = 'ot-feedback-modal';
+        modal.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.7);z-index:99999999;display:flex;align-items:center;justify-content:center;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;';
+
+        const box = document.createElement('div');
+        box.style.cssText = 'background:#1e2329;padding:20px;border-radius:10px;width:420px;color:#f1f3f5;border:1px solid #2d333b;box-shadow:0 8px 32px rgba(0,0,0,0.6);';
+
+        box.innerHTML = `
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+                <h3 style="margin:0;font-size:15px;font-weight:700;color:#fff;">💬 Workflow Feedback & Bug Report</h3>
+                <span id="ot_fb_close" style="cursor:pointer;font-size:18px;color:#8b949e;">&times;</span>
+            </div>
+
+            <textarea id="ot_fb_text" placeholder="Describe the bug, question, or feature request..." style="width:100%;height:90px;background:#0d1117;color:#fff;border:1px solid #30363d;border-radius:6px;padding:8px;font-size:12px;box-sizing:border-box;resize:none;margin-bottom:10px;"></textarea>
+
+            <div id="ot_fb_dropzone" style="border:2px dashed #30363d;border-radius:6px;padding:14px;text-align:center;background:#161b22;cursor:pointer;margin-bottom:12px;transition:0.2s;">
+                <span id="ot_fb_drop_txt" style="font-size:11px;color:#8b949e;line-height:1.4;display:block;">📷 Drag & drop image here, paste (<code style="background:#0d1117;padding:2px 4px;border-radius:3px;">Ctrl+V</code>), or click to browse</span>
+                <div id="ot_fb_img_preview_container" style="display:none;margin-top:6px;position:relative;">
+                    <img id="ot_fb_img_preview" style="max-width:100%;max-height:120px;border-radius:4px;border:1px solid #30363d;">
+                    <button id="ot_fb_remove_img" style="position:absolute;top:-6px;right:-6px;background:#da3633;color:#fff;border:none;border-radius:50%;width:20px;height:20px;font-size:11px;cursor:pointer;line-height:1;">&times;</button>
+                </div>
+            </div>
+            <input type="file" id="ot_fb_file_input" accept="image/*" style="display:none;">
+
+            <div style="display:flex;gap:8px;">
+                <button id="ot_fb_submit" style="flex:1;padding:8px;background:#238636;color:#fff;border:none;border-radius:6px;cursor:pointer;font-weight:600;font-size:12px;">Send Feedback</button>
+                <button id="ot_fb_cancel" style="padding:8px 14px;background:#30363d;color:#e6edf3;border:1px solid #484f58;border-radius:6px;cursor:pointer;font-weight:600;font-size:12px;">Cancel</button>
+            </div>
+        `;
+
+        modal.appendChild(box);
+        document.body.appendChild(modal);
+
+        const textInput = box.querySelector('#ot_fb_text');
+        const dropzone = box.querySelector('#ot_fb_dropzone');
+        const fileInput = box.querySelector('#ot_fb_file_input');
+        const imgPreview = box.querySelector('#ot_fb_img_preview');
+        const previewContainer = box.querySelector('#ot_fb_img_preview_container');
+        const dropTxt = box.querySelector('#ot_fb_drop_txt');
+        const removeBtn = box.querySelector('#ot_fb_remove_img');
+        const submitBtn = box.querySelector('#ot_fb_submit');
+
+        textInput.focus();
+
+        function handleImageFile(file) {
+            if (!file || !file.type.startsWith('image/')) return;
+            processFullImage(file, (base64) => {
+                pastedImageBase64 = base64;
+                imgPreview.src = base64;
+                previewContainer.style.display = 'block';
+                dropTxt.style.display = 'none';
+            });
+        }
+
+        dropzone.addEventListener('dragover', (e) => { e.preventDefault(); dropzone.style.borderColor = '#58a6ff'; });
+        dropzone.addEventListener('dragleave', (e) => { e.preventDefault(); dropzone.style.borderColor = '#30363d'; });
+        dropzone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropzone.style.borderColor = '#30363d';
+            if (e.dataTransfer.files.length > 0) handleImageFile(e.dataTransfer.files[0]);
+        });
+
+        const pasteHandler = (e) => {
+            const items = (e.clipboardData || e.originalEvent.clipboardData)?.items;
+            if (items) {
+                for (let item of items) {
+                    if (item.type.indexOf('image') !== -1) {
+                        handleImageFile(item.getAsFile());
+                        break;
+                    }
+                }
+            }
+        };
+        modal.addEventListener('paste', pasteHandler);
+
+        dropzone.onclick = (e) => { if (e.target !== removeBtn) fileInput.click(); };
+        fileInput.onchange = (e) => { if (e.target.files.length > 0) handleImageFile(e.target.files[0]); };
+        removeBtn.onclick = (e) => {
+            e.stopPropagation();
+            pastedImageBase64 = null;
+            imgPreview.src = '';
+            previewContainer.style.display = 'none';
+            dropTxt.style.display = 'block';
+            fileInput.value = '';
+        };
+
+        const closeModal = () => {
+            modal.removeEventListener('paste', pasteHandler);
+            modal.remove();
+        };
+
+        box.querySelector('#ot_fb_close').onclick = closeModal;
+        box.querySelector('#ot_fb_cancel').onclick = closeModal;
+
+        submitBtn.onclick = () => {
+            const text = textInput.value.trim();
+
+            if (!text && !pastedImageBase64) {
+                alert('Please enter a description or attach an image before sending.');
+                return;
+            }
+
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Sending...';
+
+            const webhookUrl = "https://defaultda67ef1bca594db29a8caa8d94617a.16.environment.api.powerplatform.com:443/powerautomate/automations/direct/cu/30/workflows/f6a352880b0e4d88967d94ccd903e696/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=VKjrKGPNKf3JUBd5uHOmyOLjF_BfOXHYogpx04ezV9U";
+            const cleanBase64 = pastedImageBase64 ? pastedImageBase64.replace(/^data:image\/\w+;base64,/, '') : '';
+
+            const assignedTicket = getUniqueTicketNumber();
+
+            const payload = {
+                "text": text || "(No text provided)",
+                "ticketNumber": assignedTicket,
+                "pageUrl": window.location.href,
+                "timestamp": new Date().toLocaleString(),
+                "hasImage": !!cleanBase64,
+                "screenshotBase64": cleanBase64
+            };
+
+            fetch(webhookUrl, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            })
+            .then(res => {
+                if (res.ok) {
+                    alert(`Thank you! Your feedback (${assignedTicket}) was sent successfully.`);
+                    closeModal();
+                } else {
+                    alert("Failed to submit feedback.");
+                    submitBtn.disabled = false;
+                    submitBtn.textContent = 'Send Feedback';
+                }
+            })
+            .catch(err => {
+                alert("Error sending feedback: " + err.message);
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'Send Feedback';
+            });
+        };
+    };
+
+    window.openOneTrackToolkit = function() { toggleMenu(); };
+
+    window.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') {
+            let handled = false;
+
+            let mainOverlay = document.getElementById('ot-toolkit-overlay');
+            if (mainOverlay) { mainOverlay.remove(); handled = true; }
+
+            let fbOverlay = document.getElementById('ot-feedback-modal');
+            if (fbOverlay) { fbOverlay.remove(); handled = true; }
+
+            document.querySelectorAll('[data-ot-child-tool="true"]').forEach(el => {
+                el.remove();
+                handled = true;
+            });
+
+            if (handled) {
+                if (document.activeElement) document.activeElement.blur();
+                e.stopImmediatePropagation();
+                e.preventDefault();
+            }
+            return;
+        }
+
+        if (!e.altKey) return;
+        const activeEl = document.activeElement;
+        if (activeEl && ['INPUT', 'TEXTAREA', 'SELECT'].includes(activeEl.tagName)) return;
+
+        const key = e.key.toLowerCase();
+        if (key === 'm') { e.preventDefault(); toggleMenu(); return; }
+
+        const cfg = getConfig();
+        for (const [id, shortcut] of Object.entries(cfg)) {
+            if (shortcut && shortcut.toLowerCase() === key) {
+                e.preventDefault();
+                window.runOTTool(id);
+                break;
+            }
+        }
+    }, true);
+
+    function toggleMenu() {
+        let existing = document.getElementById('ot-toolkit-overlay');
+        if (existing) { existing.remove(); return; }
+
+        let overlay = document.createElement('div');
+        overlay.id = 'ot-toolkit-overlay';
+        overlay.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.65);z-index:9999999;display:flex;align-items:center;justify-content:center;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;';
+
+        let box = document.createElement('div');
+        box.style.cssText = 'background:#12161a;padding:22px;border-radius:10px;box-shadow:0 8px 32px rgba(0,0,0,0.6);width:380px;color:#f1f3f5;border:1px solid #2d333b;max-height:90vh;overflow-y:auto;';
+
+        const cfg = getConfig();
+        const usage = getUsage();
+
+        let generalItems = toolMeta.filter(t => t.type === 'general');
+        let oemItems = toolMeta.filter(t => t.type === 'oem');
+
+        generalItems.sort((a, b) => (usage[b.id] || 0) - (usage[a.id] || 0));
+        oemItems.sort((a, b) => (usage[b.id] || 0) - (usage[a.id] || 0));
+
+        let generalBtns = '';
+        let oemBtns = '';
+        let inputsHtml = '';
+
+        generalItems.forEach(t => {
+            let keyBadge = cfg[t.id] ? cfg[t.id].toUpperCase() : '';
+            let btnStyle = `padding:9px;background:${t.bg};color:#fff;border:none;border-radius:6px;cursor:pointer;font-weight:600;font-size:12px;display:flex;align-items:center;justify-content:space-between;text-align:left;`;
+            let badgeStyle = 'background:rgba(0,0,0,0.25);padding:2px 6px;border-radius:4px;font-family:monospace;font-size:11px;opacity:0.8;';
+            generalBtns += `<button onclick="window.runOTTool('${t.id}')" style="${btnStyle}"><span>${t.icon ? t.icon + ' ' : ''}${t.label}</span>${keyBadge ? `<span style="${badgeStyle}">${keyBadge}</span>` : ''}</button>`;
+        });
+
+        oemItems.forEach(t => {
+            let keyBadge = cfg[t.id] ? cfg[t.id].toUpperCase() : '';
+            let btnStyle = `padding:9px;background:${t.bg};color:#fff;border:1px solid ${t.border};border-radius:6px;cursor:pointer;font-weight:600;font-size:12px;display:flex;align-items:center;justify-content:space-between;text-align:left;`;
+            let badgeStyle = 'background:rgba(0,0,0,0.25);padding:2px 6px;border-radius:4px;font-family:monospace;font-size:11px;opacity:0.8;';
+            oemBtns += `<button onclick="window.runOTTool('${t.id}')" style="${btnStyle}"><span>${t.label}</span>${keyBadge ? `<span style="${badgeStyle}">${keyBadge}</span>` : ''}</button>`;
+        });
+
+        toolMeta.forEach(t => {
+            inputsHtml += `
+              <div style="display:flex;align-items:center;justify-content:space-between;background:#161b22;padding:4px 8px;border-radius:4px;border:1px solid #30363d;">
+                <span style="font-size:11px;color:#8b949e;">${t.label}:</span>
+                <input id="hk_input_${t.id}" type="text" maxlength="1" value="${cfg[t.id] || ''}" style="width:24px;text-align:center;background:#0d1117;color:#fff;border:1px solid #30363d;border-radius:3px;font-size:11px;padding:2px;">
+              </div>`;
+        });
+
+        box.innerHTML = `
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
+              <h3 style="margin:0;font-size:16px;font-weight:700;color:#fff;">Biomed OneTrack Toolkit</h3>
+              <span id="cfg_close" style="cursor:pointer;font-size:18px;color:#8b949e;line-height:1;">&times;</span>
+            </div>
+
+            <div style="font-size:11px;font-weight:700;color:#8b949e;text-transform:uppercase;letter-spacing:0.5px;margin:8px 0 6px;">GENERAL TOOLS</div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:14px;">
+              ${generalBtns}
+            </div>
+
+            <div style="font-size:11px;font-weight:700;color:#8b949e;text-transform:uppercase;letter-spacing:0.5px;margin:6px 0;">OEM FINDINGS GENERATORS</div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:10px;">
+              ${oemBtns}
+            </div>
+
+            <!-- Collapsible Customize Section -->
+            <div style="border:1px solid #30363d;border-radius:6px;background:#161b22;overflow:hidden;margin-top:10px;">
+              <div onclick="window.toggleCustomization()" style="padding:10px 12px;cursor:pointer;display:flex;justify-content:space-between;align-items:center;font-size:12px;font-weight:600;color:#58a6ff;user-select:none;">
+                <span>⚙️ Customize Hotkeys</span>
+                <span id="ot_custom_arrow" style="font-size:10px;color:#8b949e;">▼</span>
+              </div>
+              <div id="ot_custom_panel" style="display:none;padding:12px;border-top:1px solid #2d333b;background:#0d1117;">
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;max-height:160px;overflow-y:auto;padding-right:4px;margin-bottom:10px;">
+                  ${inputsHtml}
+                </div>
+                <div style="display:flex;gap:8px;">
+                  <button onclick="window.saveCustomKeys()" style="flex:1;padding:6px;background:#238636;color:#fff;border:none;border-radius:4px;cursor:pointer;font-weight:600;font-size:11px;">Save Settings</button>
+                  <button onclick="window.resetCustomKeys()" style="padding:6px 12px;background:#30363d;color:#e6edf3;border:1px solid #484f58;border-radius:4px;cursor:pointer;font-weight:600;font-size:11px;">Reset</button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Feedback Button -->
+            <button onclick="window.sendToolkitFeedback()" style="width:100%;margin-top:10px;padding:9px;background:#3b5998;color:#fff;border:none;border-radius:6px;cursor:pointer;font-weight:600;font-size:12px;display:flex;align-items:center;justify-content:center;gap:6px;">
+              💬 Send Workflow Feedback
+            </button>
+        `;
+
+        overlay.appendChild(box);
+        document.body.appendChild(overlay);
+
+        document.getElementById('cfg_close').onclick = () => overlay.remove();
+        overlay.onclick = ev => { if (ev.target === overlay) overlay.remove(); };
+    }
+})();
