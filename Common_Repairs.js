@@ -88,7 +88,20 @@
   function getNumericConfigs() {
     try {
       const stored = localStorage.getItem('cr_numeric_config_v1');
-      if (stored) return JSON.parse(stored);
+      if (stored) {
+        let parsed = JSON.parse(stored);
+        let updated = false;
+        for (let k in initialNumericConfig) {
+          if (!parsed[k]) {
+            parsed[k] = initialNumericConfig[k];
+            updated = true;
+          }
+        }
+        if (updated) {
+          localStorage.setItem('cr_numeric_config_v1', JSON.stringify(parsed));
+        }
+        return parsed;
+      }
     } catch(e) {}
     localStorage.setItem('cr_numeric_config_v1', JSON.stringify(initialNumericConfig));
     return initialNumericConfig;
@@ -96,6 +109,16 @@
 
   function saveNumericConfigs(config) {
     localStorage.setItem('cr_numeric_config_v1', JSON.stringify(config));
+  }
+
+  // Helper to find numeric config flexibly using includes
+  function getMatchingConfig(text, configs) {
+    for (let key in configs) {
+      if (text.includes(key)) {
+        return { key, config: configs[key] };
+      }
+    }
+    return null;
   }
 
   // Frequency Storage & Recording Helpers
@@ -233,8 +256,9 @@
       row.dataset.index = index;
       row.style.cssText = 'display:flex;align-items:center;gap:6px;background:#232830;border:1px solid #30363d;border-radius:5px;padding:4px 8px;cursor:grab;user-select:none;transition:background 0.2s, border-color 0.2s;';
 
-      const isNumeric = !!numericConfigs[pText];
-      const config = numericConfigs[pText] || {};
+      const matchedConfig = getMatchingConfig(pText, numericConfigs);
+      const isNumeric = !!matchedConfig;
+      const config = matchedConfig ? matchedConfig.config : {};
 
       // Checkbox
       const checkbox = document.createElement('input');
@@ -333,9 +357,9 @@
           const list = getStoredPresets();
           const configs = getNumericConfigs();
           
-          if (configs[pText]) {
-            configs[updated.trim()] = configs[pText];
-            delete configs[pText];
+          if (matchedConfig) {
+            configs[updated.trim()] = configs[matchedConfig.key];
+            delete configs[matchedConfig.key];
             saveNumericConfigs(configs);
           }
 
@@ -363,7 +387,7 @@
           const configs = getNumericConfigs();
 
           list.splice(index, 1);
-          delete configs[pText];
+          if (matchedConfig) delete configs[matchedConfig.key];
           selectedMap.delete(pText);
 
           saveStoredPresets(list);
@@ -437,7 +461,6 @@
       return;
     }
     
-    // Record frequency usage for all selected items
     selectedMap.forEach((_, key) => recordUsage(key));
 
     const phrasesToInsert = Array.from(selectedMap.values());
