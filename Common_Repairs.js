@@ -1,9 +1,9 @@
 (function runCommonRepairs() {
   const initialDefaults = [
     "Failed Volume Test",
-    "Failed Up Occlusion",
-    "Failed Low Down Occlusion",
-    "Failed High Down Occlusion",
+    "Failed Up Occlusion. Alarm out of range.",
+    "Failed Low Down Occlusion. Alarm out of range.",
+    "Failed High Down Occlusion. Alarm out of range.",
     "Software needs to be updated to 97-0625-010600-01. (SOLIS)",
     "Software needs to be updated to 97-0625-010600-01(M). (SOLIS)",
     "Bubbled keypad",
@@ -44,15 +44,15 @@
       "unit": "mL",
       "placeholder": "e.g. 9.632"
     },
-    "Failed Low Down Occlusion": {
+    "Failed Low Down Occlusion. Alarm out of range.": {
       "unit": "psi",
       "placeholder": "e.g. 10.5"
     },
-    "Failed High Down Occlusion": {
+    "Failed High Down Occlusion. Alarm out of range.": {
       "unit": "psi",
       "placeholder": "e.g. 18.2"
     },
-    "Failed Up Occlusion": {
+    "Failed Up Occlusion. Alarm out of range.": {
       "unit": "psi",
       "placeholder": "e.g. -8.53"
     },
