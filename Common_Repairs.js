@@ -44,15 +44,15 @@
       "unit": "mL",
       "placeholder": "e.g. 9.632"
     },
-    "Failed Low Down Occlusion. Alarm out of range.": {
+    "Failed Low Down Occlusion": {
       "unit": "psi",
       "placeholder": "e.g. 10.5"
     },
-    "Failed High Down Occlusion. Alarm out of range.": {
+    "Failed High Down Occlusion": {
       "unit": "psi",
       "placeholder": "e.g. 18.2"
     },
-    "Failed Up Occlusion. Alarm out of range.": {
+    "Failed Up Occlusion": {
       "unit": "psi",
       "placeholder": "e.g. -8.53"
     },
