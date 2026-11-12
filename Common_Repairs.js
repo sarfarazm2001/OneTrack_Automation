@@ -4,6 +4,8 @@
     "Failed Up Occlusion",
     "Failed Low Down Occlusion",
     "Failed High Down Occlusion",
+    "Software needs to be updated to 97-0625-010600-01. (SOLIS)",
+    "Software needs to be updated to 97-0625-010600-01(M). (SOLIS)",
     "Bubbled keypad",
     "Needs pressure strains calibration.",
     "Torn up keypad",
