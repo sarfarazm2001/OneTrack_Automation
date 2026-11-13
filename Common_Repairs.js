@@ -35,12 +35,15 @@
     "Worn off keypad overlay.",
     "BT2 reading:",
     "BT3 reading:",
+    "Low DSO Voltage:",
     "Error Code:",
     "SYSTEM TIMEOUT!",
     "MOTOR STALLED!",
-    "Standby Light failure"
+    "Standby Light failure",
+    "Giving error message : Cassette not attached properly. Reattach cassette."
   ];
 
+  // Map phrases that require unit values and custom placeholding
   const initialNumericConfig = {
     "Failed Volume Test": {
       "unit": "mL",
@@ -66,12 +69,17 @@
       "unit": "vdc",
       "placeholder": "e.g. 0.480"
     },
+    "Low DSO Voltage:": {
+      "unit": "V",
+      "placeholder": "e.g. 1.25"
+    },
     "Error Code:": {
       "unit": "",
       "placeholder": "e.g. 102"
     }
   };
 
+  // Storage Handlers for Presets
   function getStoredPresets() {
     try {
       const stored = localStorage.getItem('cr_preset_list_v1');
@@ -85,6 +93,7 @@
     localStorage.setItem('cr_preset_list_v1', JSON.stringify(list));
   }
 
+  // Storage Handlers for Numeric Configurations
   function getNumericConfigs() {
     try {
       const stored = localStorage.getItem('cr_numeric_config_v1');
@@ -111,6 +120,7 @@
     localStorage.setItem('cr_numeric_config_v1', JSON.stringify(config));
   }
 
+  // Helper to find numeric config flexibly using includes
   function getMatchingConfig(text, configs) {
     for (let key in configs) {
       if (text.includes(key)) {
@@ -120,6 +130,7 @@
     return null;
   }
 
+  // Frequency Storage & Recording Helpers
   function getFreq() {
     try { return JSON.parse(localStorage.getItem('ot_freq_common_repairs') || '{}'); }
     catch(e) { return {}; }
@@ -131,6 +142,7 @@
     localStorage.setItem('ot_freq_common_repairs', JSON.stringify(freq));
   }
 
+  // Format array into grammatically correct sentence
   function formatSelectedPhrases(phrases) {
     if (phrases.length === 0) return "";
     if (phrases.length === 1) return phrases[0] + ".";
@@ -138,6 +150,7 @@
     return phrases.slice(0, -1).join(", ") + ", and " + phrases[phrases.length - 1] + ".";
   }
 
+  // Target Injection & Automatic Clipboard Copy
   function applyTextToDOM(text) {
     if (!text) return;
 
@@ -169,9 +182,11 @@
     }
   }
 
+  // Remove existing instance if open
   const existing = document.getElementById('cr-preset-modal');
   if (existing) existing.remove();
 
+  // Create Modal Shell
   const modal = document.createElement('div');
   modal.id = 'cr-preset-modal';
   modal.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.7);z-index:9999999;display:flex;align-items:center;justify-content:center;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;';
@@ -185,24 +200,29 @@
       <span id="cr_close_x" style="cursor:pointer;font-size:20px;color:#8b949e;line-height:1;">&times;</span>
     </div>
 
+    <!-- Multi-Insert Header Action -->
     <div style="background:#262c36;padding:10px;border-radius:6px;border:1px solid #363d4a;margin-bottom:10px;display:flex;justify-content:space-between;align-items:center;">
       <span style="font-size:12px;color:#8b949e;"><strong id="cr_selected_count" style="color:#58a6ff;">0</strong> items selected</span>
       <button id="cr_insert_selected_btn" style="padding:6px 12px;background:#1f6feb;color:#fff;border:none;border-radius:4px;cursor:pointer;font-weight:600;font-size:12px;">Insert Combined Selected</button>
     </div>
 
+    <!-- Search & Add Bar -->
     <div style="display:flex;gap:6px;margin-bottom:10px;">
       <input type="text" id="cr_search" placeholder="🔍 Search common phrases..." style="flex:1;padding:8px;background:#1e2329;color:#fff;border:1px solid #363d4a;border-radius:4px;font-size:12px;box-sizing:border-box;">
       <button id="cr_add_btn" style="padding:8px 12px;background:#238636;color:#fff;border:none;border-radius:4px;cursor:pointer;font-weight:600;font-size:12px;white-space:nowrap;">➕ Add Phrase</button>
     </div>
 
+    <!-- Presets List -->
     <div id="cr_presets_list" style="overflow-y:auto;flex:1;display:flex;flex-direction:column;gap:6px;padding-right:4px;"></div>
 
+    <!-- File Import/Export Bar -->
     <div style="display:flex;gap:6px;margin-top:10px;padding-top:10px;border-top:1px solid #2d333b;">
       <button id="cr_export_btn" style="flex:1;padding:7px;background:#316dca;color:#fff;border:none;border-radius:4px;cursor:pointer;font-weight:600;font-size:11px;">📤 Export Source (.js)</button>
       <button id="cr_import_btn" style="flex:1;padding:7px;background:#6e40c9;color:#fff;border:none;border-radius:4px;cursor:pointer;font-weight:600;font-size:11px;">📥 Import Preset File</button>
       <input type="file" id="cr_import_file_input" accept=".js,.json" style="display:none;">
     </div>
 
+    <!-- Footer Controls -->
     <div style="display:flex;gap:8px;margin-top:12px;">
       <button id="cr_reset_btn" title="Reset to original list" style="padding:8px 12px;background:#484f58;color:#fff;border:none;border-radius:4px;cursor:pointer;font-weight:600;font-size:12px;">↺ Reset Defaults</button>
       <button id="cr_back_btn" style="flex:1;padding:8px;background:#363d4a;color:#fff;border:none;border-radius:4px;cursor:pointer;font-weight:600;font-size:12px;">← Back</button>
