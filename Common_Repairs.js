@@ -1,4 +1,4 @@
-javascript:(function runCommonRepairs() {
+(function runCommonRepairs() {
   const initialDefaults = [
     "Failed Volume Test",
     "Failed Up Occlusion. Alarm out of range.",
