@@ -14,7 +14,8 @@
   const initialDefaults = [
     "Battery replaced on {DATE}. (JOEY)",
     "PM Passed.",
-    "Sending it to OEM for repairs.",
+    "Repair costs under approval limit. Sending it to OEM for repairs.",
+    "Repair costs over approval limit. Sent approval request to the customer.",
     "This device is under warranty.",
     "TE: 8A, 45TR, 80TR. (SOLIS)",
     "TE: 8TR, 165TR. (6000 & 8000)",
