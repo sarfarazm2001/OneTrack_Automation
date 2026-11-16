@@ -39,6 +39,7 @@
     "Error Code:",
     "SYSTEM TIMEOUT!",
     "MOTOR STALLED!",
+    "MOTOR SERVICE DUE",
     "Standby Light failure",
     "Giving error message : Cassette not attached properly. Reattach cassette."
   ];
