@@ -1,11 +1,11 @@
 javascript:(function runCommonRepairs() {
   const initialDefaults = [
   "Failed Volume Test",
+  "Needs Volume calibration.",
   "Failed Up Occlusion. Alarm out of range.",
   "Failed Low Down Occlusion. Alarm out of range.",
   "Failed High Down Occlusion. Alarm out of range.",
   "Needs pressure strains calibration.",
-  "Needs Volume calibration.",
   "Needs baseline calibration.",
   "PCB replacement required.",
   "Mech replacement required.",
@@ -34,16 +34,16 @@ javascript:(function runCommonRepairs() {
   "Outdated battery and it needs to be changed. (JOEY)",
   "Worn off keypad overlay.",
   "BT2 reading (range: 3.6 - 4.1 V)",
+  "Needs new BT2.",
   "BT3 reading (range: <2.80 V)",
+  "Needs new BT3.",
   "Low DSO Voltage:",
   "Error Code:",
   "SYSTEM TIMEOUT!",
   "MOTOR STALLED!",
   "MOTOR SERVICE DUE!",
   "Standby Light failure",
-  "Giving error message : Cassette not attached properly. Reattach cassette.",
-  "Needs new BT2.",
-  "Needs new BT3."
+  "Giving error message : Cassette not attached properly. Reattach cassette."
 ];
 
   // Map phrases that require unit values and custom placeholding (matching substring keys)
