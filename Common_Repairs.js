@@ -46,7 +46,7 @@ javascript:(function runCommonRepairs() {
   "Needs new BT3."
 ];
 
-  // Map phrases that require unit values and custom placeholding
+  // Map phrases that require unit values and custom placeholding (matching substring keys)
   const initialNumericConfig = {
   "Failed Volume Test": {
     "unit": "mL",
@@ -64,13 +64,13 @@ javascript:(function runCommonRepairs() {
     "unit": "psi",
     "placeholder": "e.g. -8.53"
   },
-  "BT2 reading:": {
-    "unit": "vdc",
-    "placeholder": "e.g. 0.480"
+  "BT2 reading": {
+    "unit": "V",
+    "placeholder": "e.g. 3.85"
   },
-  "BT3 reading:": {
-    "unit": "vdc",
-    "placeholder": "e.g. 0.480"
+  "BT3 reading": {
+    "unit": "V",
+    "placeholder": "e.g. 2.50"
   },
   "Low DSO Voltage:": {
     "unit": "V",
@@ -484,6 +484,7 @@ javascript:(function runCommonRepairs() {
 
   document.getElementById('cr_reset_btn').onclick = () => {
     if (confirm("Reset all common repairs back to original defaults? Any customized edits, reordering, or deletions will be reset.")) {
+      localStorage.removeItem('cr_numeric_config_v1'); // Clear stale cached numeric keys
       saveStoredPresets(initialDefaults);
       saveNumericConfigs(initialNumericConfig);
       selectedMap.clear();
