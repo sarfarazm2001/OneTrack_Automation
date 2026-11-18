@@ -33,9 +33,9 @@ javascript:(function runCommonRepairs() {
   "Some kind of ink stain on rubber case",
   "Outdated battery and it needs to be changed. (JOEY)",
   "Worn off keypad overlay.",
-  "BT2 reading (range: 3.6 - 4.1 V)",
+  "BT2 reading (passing range: 3.6 - 4.1 V):",
   "Needs new BT2.",
-  "BT3 reading (range: <2.80 V)",
+  "BT3 reading (passing range: <2.80 V):",
   "Needs new BT3.",
   "Low DSO Voltage:",
   "Error Code:",
@@ -64,11 +64,11 @@ javascript:(function runCommonRepairs() {
     "unit": "psi",
     "placeholder": "e.g. -8.53"
   },
-  "BT2 reading (range: 3.6 - 4.1 V)": {
+  "BT2 reading (passing range: 3.6 - 4.1 V):": {
     "unit": "V",
     "placeholder": "e.g. 3.85"
   },
-  "BT3 reading (range: <2.80 V)": {
+  "BT3 reading (passing range: <2.80 V):": {
     "unit": "V",
     "placeholder": "e.g. 2.50"
   },
